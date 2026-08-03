@@ -1,0 +1,84 @@
+import { useMutation } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Mail, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Label } from '@/components/ui/Label';
+import { signIn } from '@/services/authService';
+import { toast } from 'sonner';
+import { Loading } from '@/components/ui/Loading';
+
+const schema = z.object({
+  email: z.string().email('Informe um e-mail válido'),
+  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres'),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export function LoginPage() {
+  const navigate = useNavigate();
+  const mutation = useMutation({
+    mutationFn: signIn,
+    onSuccess: () => {
+      toast.success('Login realizado com sucesso');
+      navigate('/app/dashboard');
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  if (mutation.isPending) return <Loading fullScreen label="Entrando no sistema" />;
+
+  return (
+    <Card className="w-full max-w-md shadow-soft">
+      <CardHeader>
+        <CardTitle>Entrar</CardTitle>
+        <CardDescription>Acesse o painel administrativo da Vibe Afiações.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="space-y-4" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input id="email" type="email" autoComplete="email" className="pl-11" {...register('email')} />
+            </div>
+            {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha</Label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input id="password" type="password" autoComplete="current-password" className="pl-11" {...register('password')} />
+            </div>
+            {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
+          </div>
+
+          <Button className="w-full" type="submit">
+            Entrar
+          </Button>
+        </form>
+
+        <div className="mt-6 flex items-center justify-between text-sm">
+          <Link className="text-primary hover:underline" to="/esqueci-senha">
+            Esqueci minha senha
+          </Link>
+          <Link className="text-primary hover:underline" to="/cadastro">
+            Criar conta
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
