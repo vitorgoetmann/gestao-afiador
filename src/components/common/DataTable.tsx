@@ -30,7 +30,7 @@ export function DataTable({
             <EmptyState title="Nenhum registro encontrado" description="Crie um item para começar a operar o sistema." />
           </div>
         ) : (
-          <div className="overflow-x-auto">{children}</div>
+          <div className="overflow-hidden md:overflow-x-auto">{children}</div>
         )}
       </CardContent>
     </Card>

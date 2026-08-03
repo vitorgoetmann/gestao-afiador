@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
-import { CalendarDays, Coins, HandCoins, ReceiptText, Users, Scissors, ChartColumn, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Coins, HandCoins, ReceiptText, Users, Scissors, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -16,7 +16,7 @@ const COLORS = ['#0f7a3b', '#16a34a', '#22c55e', '#4ade80', '#86efac'];
 export function DashboardPage() {
   const { data, isLoading, isError, error } = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardData });
   const revenueTrackRef = useRef<HTMLDivElement | null>(null);
-  const [activeRevenueIndex, setActiveRevenueIndex] = useState(1);
+  const [activeRevenueIndex, setActiveRevenueIndex] = useState(2);
 
   const charts = useMemo(() => {
     const afiacoes = data?.afiacoes ?? [];
@@ -129,28 +129,9 @@ export function DashboardPage() {
                     icon={<Icon className="h-5 w-5" />}
                     accent={slide.accent}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setActiveRevenueIndex(index)}
-                    className="mt-2 w-full rounded-2xl px-3 py-2 text-center text-xs text-muted-foreground transition-colors hover:bg-secondary/70"
-                  >
-                    {index === activeRevenueIndex ? 'Slide ativo' : 'Toque para abrir'}
-                  </button>
                 </div>
               );
             })}
-          </div>
-
-          <div className="mt-2 flex justify-center gap-2">
-            {revenueSlides.map((slide, index) => (
-              <button
-                key={slide.key}
-                type="button"
-                onClick={() => setActiveRevenueIndex(index)}
-                className={index === activeRevenueIndex ? 'h-2.5 w-8 rounded-full bg-primary' : 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30'}
-                aria-label={`Ir para ${slide.label}`}
-              />
-            ))}
           </div>
         </div>
       </div>
@@ -159,10 +140,6 @@ export function DashboardPage() {
         <StatCard title="Faturamento Total" value={formatCurrency(data?.stats.faturamentoTotal ?? 0)} icon={<Coins className="h-5 w-5" />} accent />
         <StatCard title="Quantidade de Clientes" value={`${data?.stats.clientes ?? 0}`} icon={<Users className="h-5 w-5" />} />
         <StatCard title="Quantidade de Afiações" value={`${data?.stats.afiacoes ?? 0}`} icon={<Scissors className="h-5 w-5" />} />
-        <StatCard title="Quantidade de Clientes" value={`${data?.stats.clientes ?? 0}`} icon={<Users className="h-5 w-5" />} />
-        <StatCard title="Quantidade de Afiações" value={`${data?.stats.afiacoes ?? 0}`} icon={<Scissors className="h-5 w-5" />} />
-        <StatCard title="Ticket Médio" value={formatCurrency(data?.stats.ticketMedio ?? 0)} icon={<ChartColumn className="h-5 w-5" />} />
-        <StatCard title="Operação Ativa" value="100%" icon={<Wallet className="h-5 w-5" />} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
@@ -217,23 +194,6 @@ export function DashboardPage() {
                 <Tooltip />
                 <Bar dataKey="valor" fill="#0f7a3b" radius={[10, 10, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Gráfico diário</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={charts.daily}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => formatCurrency(Number(value)).replace(',00', '')} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
-                <Line type="monotone" dataKey="valor" stroke="#16a34a" strokeWidth={3} dot={{ r: 4 }} />
-              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

@@ -23,6 +23,8 @@ import { fetchClientes } from '@/services/clientesService';
 import { toast } from 'sonner';
 import type { AfiacaoComCliente } from '@/types/domain';
 import { formatCurrency, formatDateTime } from '@/utils/format';
+import { Card } from '@/components/ui/Card';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   cliente_id: z.string().min(1, 'Selecione um cliente'),
@@ -123,7 +125,7 @@ export function AfiacoesPage() {
       />
 
       <DataTable title="Histórico de afiações" description="Lista com cliente, ferramenta, pagamento e valor." loading={isLoading} empty={!sorted.length}>
-        <Table>
+        <Table className="hidden md:table">
           <TableHead>
             <TableRow>
               <TableHeader>Cliente</TableHeader>
@@ -153,6 +155,44 @@ export function AfiacoesPage() {
             {!sorted.length ? <TableEmpty colSpan={6}>Nenhuma afiação encontrada.</TableEmpty> : null}
           </TableBody>
         </Table>
+        <div className="grid gap-3 md:hidden p-4 sm:p-6">
+          {sorted.map((item) => (
+            <Card key={item.id} className="border-border/80 bg-background/80">
+              <div className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{item.clientes?.nome ?? 'Cliente não vinculado'}</p>
+                    <p className="text-xs text-muted-foreground">{item.forma_pagamento}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => startEdit(item)}>Editar</Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleting(item)}>Excluir</Button>
+                  </div>
+                </div>
+                <div className="grid gap-2 text-sm">
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Ferramenta</p>
+                    <p className="mt-1 break-words">{item.tipo_ferramenta === 'Outros' ? item.outro_tipo || 'Outros' : item.tipo_ferramenta}</p>
+                  </div>
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
+                    <p className={cn('mt-1 break-words', !item.observacoes && 'text-muted-foreground')}>{item.observacoes || 'Sem observações'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor</p>
+                      <p className="mt-1 font-medium">{formatCurrency(Number(item.valor))}</p>
+                    </div>
+                    <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Criado em</p>
+                      <p className="mt-1 text-xs leading-5">{formatDateTime(item.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </DataTable>
 
       <Modal open={open} title={editing ? 'Editar afiação' : 'Nova afiação'} onClose={() => setOpen(false)}>

@@ -15,6 +15,7 @@ import { Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InputHTMLAttributes } from 'react';
 import { writeStorage } from '@/utils/storage';
+import { cn } from '@/lib/utils';
 
 const defaultFilters: ReportFilters = {
   period: 'month',
@@ -98,7 +99,7 @@ export function RelatoriosPage() {
       </div>
 
       <DataTable title="Relatório detalhado" description="Registros retornados pelos filtros aplicados." loading={isLoading} empty={!filtered.length}>
-        <Table>
+        <Table className="hidden md:table">
           <TableHead>
             <TableRow>
               <TableHeader>Cliente</TableHeader>
@@ -121,6 +122,38 @@ export function RelatoriosPage() {
             {!filtered.length ? <TableEmpty colSpan={5}>Nenhum resultado para os filtros atuais.</TableEmpty> : null}
           </TableBody>
         </Table>
+        <div className="grid gap-3 md:hidden p-4 sm:p-6">
+          {filtered.map((item) => (
+            <Card key={item.id} className="border-border/80 bg-background/80">
+              <div className="space-y-3 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.clientes?.nome ?? '-'}</p>
+                  <p className="text-xs text-muted-foreground">{item.forma_pagamento}</p>
+                </div>
+                <div className="grid gap-2 text-sm">
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Ferramenta</p>
+                    <p className="mt-1 break-words">{item.tipo_ferramenta === 'Outros' ? item.outro_tipo || 'Outros' : item.tipo_ferramenta}</p>
+                  </div>
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
+                    <p className={cn('mt-1 break-words', !item.observacoes && 'text-muted-foreground')}>{item.observacoes || 'Sem observações'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor</p>
+                      <p className="mt-1 font-medium">{formatCurrency(Number(item.valor))}</p>
+                    </div>
+                    <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Data</p>
+                      <p className="mt-1 text-xs leading-5">{formatDateTime(item.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </DataTable>
     </div>
   );

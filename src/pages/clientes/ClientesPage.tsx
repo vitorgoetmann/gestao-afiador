@@ -22,6 +22,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
 import type { Cliente } from '@/types/domain';
 import { formatDateTime } from '@/utils/format';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   nome: z.string().min(3, 'Informe o nome do cliente'),
@@ -104,7 +105,7 @@ export function ClientesPage() {
       />
 
       <DataTable title="Lista de clientes" description="Ordene e gerencie registros cadastrados." loading={isLoading} empty={!sorted.length}>
-        <Table>
+        <Table className="hidden md:table">
           <TableHead>
             <TableRow>
               <TableHeader>Nome</TableHeader>
@@ -132,6 +133,35 @@ export function ClientesPage() {
             {!sorted.length ? <TableEmpty colSpan={5}>Nenhum cliente encontrado.</TableEmpty> : null}
           </TableBody>
         </Table>
+        <div className="grid gap-3 md:hidden p-4 sm:p-6">
+          {sorted.map((cliente) => (
+            <Card key={cliente.id} className="border-border/80 bg-background/80">
+              <div className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{cliente.nome}</p>
+                    <p className="text-xs text-muted-foreground">{cliente.telefone}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => startEdit(cliente)}>Editar</Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleting(cliente)}>Excluir</Button>
+                  </div>
+                </div>
+                <div className="grid gap-2 text-sm">
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Endereço</p>
+                    <p className="mt-1 break-words">{cliente.endereco}</p>
+                  </div>
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
+                    <p className={cn('mt-1 break-words', !cliente.observacoes && 'text-muted-foreground')}>{cliente.observacoes || 'Sem observações'}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Criado em {formatDateTime(cliente.created_at)}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </DataTable>
 
       <Modal open={open} title={editing ? 'Editar cliente' : 'Novo cliente'} onClose={() => setOpen(false)}>
