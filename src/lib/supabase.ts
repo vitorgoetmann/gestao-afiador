@@ -82,16 +82,12 @@ function writeJson<T>(key: string, value: T) {
 }
 
 function seedLocalData() {
-  if (!readJson<StoredUser[]>(STORAGE_KEYS.users, []).length) {
-    writeJson(STORAGE_KEYS.users, [
-      {
-        id: crypto.randomUUID(),
-        email: DEMO_EMAIL,
-        password: DEMO_PASSWORD,
-        user_metadata: { username: DEMO_USERNAME },
-      },
-    ]);
-  }
+  const users = readJson<StoredUser[]>(STORAGE_KEYS.users, []);
+  const filteredUsers = users.filter((user) => user.email !== DEMO_EMAIL);
+  if (filteredUsers.length !== users.length) writeJson(STORAGE_KEYS.users, filteredUsers);
+
+  const session = getSession();
+  if (session?.user?.email === DEMO_EMAIL) setSession(null);
 
   if (!readJson<LocalRow[]>(STORAGE_KEYS.clientes, []).length) writeJson(STORAGE_KEYS.clientes, demoClients);
   if (!readJson<LocalRow[]>(STORAGE_KEYS.afiacoes, []).length) writeJson(STORAGE_KEYS.afiacoes, demoAfiacoes);
