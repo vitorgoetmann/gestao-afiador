@@ -38,6 +38,7 @@ export type DashboardStats = {
   faturamentoHoje: number;
   faturamentoSemana: number;
   faturamentoMes: number;
+  faturamentoAno: number;
   clientes: number;
   afiacoes: number;
   ticketMedio: number;

@@ -1,19 +1,22 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
-import { CalendarDays, Coins, HandCoins, ReceiptText, Users, Scissors, ChartColumn, Wallet } from 'lucide-react';
+import { CalendarDays, Coins, HandCoins, ReceiptText, Users, Scissors, ChartColumn, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatCard } from '@/components/common/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { Loading } from '@/components/ui/Loading';
 import { EmptyState } from '@/components/common/EmptyState';
 import { fetchDashboardData } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/format';
-import { useMemo } from 'react';
 
 const COLORS = ['#0f7a3b', '#16a34a', '#22c55e', '#4ade80', '#86efac'];
 
 export function DashboardPage() {
   const { data, isLoading, isError, error } = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardData });
+  const revenueTrackRef = useRef<HTMLDivElement | null>(null);
+  const [activeRevenueIndex, setActiveRevenueIndex] = useState(1);
 
   const charts = useMemo(() => {
     const afiacoes = data?.afiacoes ?? [];
@@ -41,6 +44,49 @@ export function DashboardPage() {
     };
   }, [data?.afiacoes]);
 
+  const revenueSlides = useMemo(
+    () => [
+      { key: 'day', label: 'Faturamento do dia', value: data?.stats.faturamentoHoje ?? 0, icon: CalendarDays, accent: false },
+      { key: 'week', label: 'Faturamento da semana', value: data?.stats.faturamentoSemana ?? 0, icon: HandCoins, accent: false },
+      { key: 'month', label: 'Faturamento do mês', value: data?.stats.faturamentoMes ?? 0, icon: ReceiptText, accent: true },
+      { key: 'year', label: 'Faturamento do ano', value: data?.stats.faturamentoAno ?? 0, icon: Coins, accent: false },
+    ],
+    [data?.stats],
+  );
+
+  useEffect(() => {
+    const activeSlide = revenueTrackRef.current?.children.item(activeRevenueIndex) as HTMLElement | null;
+    activeSlide?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeRevenueIndex]);
+
+  function moveRevenue(direction: -1 | 1) {
+    setActiveRevenueIndex((current) => {
+      const nextIndex = Math.min(Math.max(current + direction, 0), revenueSlides.length - 1);
+      return nextIndex;
+    });
+  }
+
+  function handleRevenueScroll() {
+    const container = revenueTrackRef.current;
+    if (!container) return;
+
+    const children = Array.from(container.children) as HTMLElement[];
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    children.forEach((child, index) => {
+      const childCenter = child.offsetLeft + child.offsetWidth / 2;
+      const distance = Math.abs(childCenter - containerCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setActiveRevenueIndex(closestIndex);
+  }
+
   if (isLoading) return <Loading label="Carregando dashboard" />;
   if (isError) return <EmptyState title="Erro ao carregar dashboard" description={error instanceof Error ? error.message : 'Falha inesperada'} />;
 
@@ -51,11 +97,68 @@ export function DashboardPage() {
         description="Visão operacional com faturamento, volume de clientes e comportamento de receitas."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Faturamento</p>
+            <p className="text-xs text-muted-foreground">Deslize para trocar entre dia, semana, mês e ano.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="icon" onClick={() => moveRevenue(-1)} aria-label="Slide anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="icon" onClick={() => moveRevenue(1)} aria-label="Próximo slide">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div
+            ref={revenueTrackRef}
+            onScroll={handleRevenueScroll}
+            className="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {revenueSlides.map((slide, index) => {
+              const Icon = slide.icon;
+              return (
+                <div key={slide.key} className="min-w-full snap-center">
+                  <StatCard
+                    title={slide.label}
+                    value={formatCurrency(slide.value)}
+                    icon={<Icon className="h-5 w-5" />}
+                    accent={slide.accent}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setActiveRevenueIndex(index)}
+                    className="mt-2 w-full rounded-2xl px-3 py-2 text-center text-xs text-muted-foreground transition-colors hover:bg-secondary/70"
+                  >
+                    {index === activeRevenueIndex ? 'Slide ativo' : 'Toque para abrir'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 flex justify-center gap-2">
+            {revenueSlides.map((slide, index) => (
+              <button
+                key={slide.key}
+                type="button"
+                onClick={() => setActiveRevenueIndex(index)}
+                className={index === activeRevenueIndex ? 'h-2.5 w-8 rounded-full bg-primary' : 'h-2.5 w-2.5 rounded-full bg-muted-foreground/30'}
+                aria-label={`Ir para ${slide.label}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard title="Faturamento Total" value={formatCurrency(data?.stats.faturamentoTotal ?? 0)} icon={<Coins className="h-5 w-5" />} accent />
-        <StatCard title="Hoje" value={formatCurrency(data?.stats.faturamentoHoje ?? 0)} icon={<CalendarDays className="h-5 w-5" />} />
-        <StatCard title="Semana" value={formatCurrency(data?.stats.faturamentoSemana ?? 0)} icon={<HandCoins className="h-5 w-5" />} />
-        <StatCard title="Mês" value={formatCurrency(data?.stats.faturamentoMes ?? 0)} icon={<ReceiptText className="h-5 w-5" />} />
+        <StatCard title="Quantidade de Clientes" value={`${data?.stats.clientes ?? 0}`} icon={<Users className="h-5 w-5" />} />
+        <StatCard title="Quantidade de Afiações" value={`${data?.stats.afiacoes ?? 0}`} icon={<Scissors className="h-5 w-5" />} />
         <StatCard title="Quantidade de Clientes" value={`${data?.stats.clientes ?? 0}`} icon={<Users className="h-5 w-5" />} />
         <StatCard title="Quantidade de Afiações" value={`${data?.stats.afiacoes ?? 0}`} icon={<Scissors className="h-5 w-5" />} />
         <StatCard title="Ticket Médio" value={formatCurrency(data?.stats.ticketMedio ?? 0)} icon={<ChartColumn className="h-5 w-5" />} />

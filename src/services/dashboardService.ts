@@ -18,12 +18,16 @@ export async function fetchDashboardData() {
   const today = afiacoes.filter((item) => inToday(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
   const week = afiacoes.filter((item) => inWeek(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
   const month = afiacoes.filter((item) => inMonth(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
+  const year = afiacoes
+    .filter((item) => new Date(item.created_at).getFullYear() === new Date().getFullYear())
+    .reduce((sum, item) => sum + Number(item.valor), 0);
 
   const stats: DashboardStats = {
     faturamentoTotal: total,
     faturamentoHoje: today,
     faturamentoSemana: week,
     faturamentoMes: month,
+    faturamentoAno: year,
     clientes: clientes.length,
     afiacoes: afiacoes.length,
     ticketMedio: afiacoes.length ? total / afiacoes.length : 0,
