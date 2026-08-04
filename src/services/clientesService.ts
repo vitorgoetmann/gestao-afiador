@@ -51,5 +51,11 @@ export async function updateCliente(id: string, payload: ClientePayload) {
 
 export async function deleteCliente(id: string) {
   const { error } = await supabase.from('clientes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23503') {
+      throw new Error('Este cliente possui afiações vinculadas. Exclua ou remova as afiações antes de excluir o cliente.');
+    }
+
+    throw error;
+  }
 }
