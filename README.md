@@ -1,8 +1,11 @@
 # Gestão Afiador
-Solução de interface para gerenciamento de serviços de afiação, clientes e controle de métricas.
+Plataforma de gerenciamento operacional e financeiro exclusiva para oficinas e profissionais de afiação de ferramentas.
 
-## Contexto
-Este projeto foi desenvolvido para substituir controles manuais e planilhas em oficinas de afiação, oferecendo uma plataforma web para cadastro estruturado de clientes, acompanhamento do histórico de serviços (afiações) e análise de indicadores operacionais e financeiros em tempo real.
+## Sobre o Projeto
+O Gestão Afiador é um sistema web desenvolvido para digitalizar o fluxo de trabalho de afiadores. A aplicação centraliza o registro de todos os serviços realizados (afiações), o cadastro e histórico de clientes, além de fornecer um painel com métricas atualizadas de faturamento e volume de serviços.
+
+## Contexto e Problema Resolvido
+Este projeto existe para eliminar a desorganização e a perda de informações causadas pelo uso de controles manuais e anotações em papel. A principal dor que ele resolve é a dificuldade do afiador em rastrear quais ferramentas foram afiadas para quais clientes, além de simplificar o controle financeiro de pagamentos pendentes e concluídos.
 
 ## Arquitetura e Tecnologias
 * **React e TypeScript**: Construção de interface de usuário estruturada com tipagem estática, garantindo manutenção segura do código.
@@ -30,7 +33,7 @@ Em desenvolvimento (MVP).
 ![Clientes Desktop](docs/clientes-noPC.png)
 ![Clientes Mobile](docs/clientes-noCELL.png)
 
-### Ordens de Serviço e Relatórios
+### Histórico de Afiações e Relatórios
 ![Afiações Mobile](docs/afiacoes-noCELL.png)
 ![Relatórios Desktop](docs/relatorios-noPC.png)
 
