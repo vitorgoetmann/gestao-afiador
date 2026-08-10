@@ -20,6 +20,10 @@ Este projeto existe para eliminar a desorganização e a perda de informações 
 * **Segurança e Validação**: Uso do Zod e React Hook Form para validação estrita de dados na entrada, prevenindo inconsistências no banco de dados.
 * **Responsividade Híbrida**: Layout adaptável para uso tanto em terminais fixos (desktop) quanto em dispositivos móveis no chão de fábrica.
 
+## Infraestrutura e Hospedagem
+* **Frontend (Hospedagem)**: A aplicação está hospedada na **Vercel**, garantindo entrega contínua (CI/CD) e alta disponibilidade.
+* **Backend (Banco de Dados)**: A infraestrutura de dados e autenticação é gerenciada pelo **Supabase**, operando com um banco de dados relacional (PostgreSQL).
+
 ## Status do Projeto
 Em desenvolvimento (MVP).
 
