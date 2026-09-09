@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { AfiacaoComCliente, Cliente, DashboardStats } from '@/types/domain';
 import { inMonth, inToday, inWeek } from '@/utils/format';
+import { parseISO } from 'date-fns';
 
 export async function fetchDashboardData() {
   const [clientesResult, afiacoesResult] = await Promise.all([
@@ -15,11 +16,11 @@ export async function fetchDashboardData() {
   const afiacoes = (afiacoesResult.data ?? []) as AfiacaoComCliente[];
 
   const total = afiacoes.reduce((sum, item) => sum + Number(item.valor), 0);
-  const today = afiacoes.filter((item) => inToday(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
-  const week = afiacoes.filter((item) => inWeek(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
-  const month = afiacoes.filter((item) => inMonth(item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
+  const today = afiacoes.filter((item) => inToday(item.data_afiacao ?? item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
+  const week = afiacoes.filter((item) => inWeek(item.data_afiacao ?? item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
+  const month = afiacoes.filter((item) => inMonth(item.data_afiacao ?? item.created_at)).reduce((sum, item) => sum + Number(item.valor), 0);
   const year = afiacoes
-    .filter((item) => new Date(item.created_at).getFullYear() === new Date().getFullYear())
+    .filter((item) => parseISO(item.data_afiacao ?? item.created_at).getFullYear() === new Date().getFullYear())
     .reduce((sum, item) => sum + Number(item.valor), 0);
 
   const stats: DashboardStats = {

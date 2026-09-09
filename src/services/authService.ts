@@ -1,5 +1,12 @@
 import { supabase } from '@/lib/supabase';
 
+export async function getCurrentUserId() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!data.user?.id) throw new Error('Sessão inválida. Entre novamente no sistema.');
+  return data.user.id;
+}
+
 export type SignUpInput = {
   username: string;
   email: string;

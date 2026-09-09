@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { AfiacaoComCliente } from '@/types/domain';
+import { format, startOfMonth, startOfWeek } from 'date-fns';
 
 export type ReportFilters = {
   period: 'today' | 'week' | 'month' | 'custom';
@@ -16,8 +17,18 @@ export async function fetchRelatorios(filters: ReportFilters) {
   if (filters.clienteId) query = query.eq('cliente_id', filters.clienteId);
   if (filters.formaPagamento) query = query.eq('forma_pagamento', filters.formaPagamento);
   if (filters.ferramenta) query = query.eq('tipo_ferramenta', filters.ferramenta);
-  if (filters.period === 'custom' && filters.from && filters.to) {
-    query = query.gte('created_at', filters.from).lte('created_at', filters.to);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const periodStart = filters.period === 'today'
+    ? today
+    : filters.period === 'week'
+      ? format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+      : filters.period === 'month'
+        ? format(startOfMonth(new Date()), 'yyyy-MM-dd')
+        : filters.from;
+  const periodEnd = filters.period === 'custom' ? filters.to : today;
+
+  if (periodStart && periodEnd) {
+    query = query.gte('data_afiacao', periodStart).lte('data_afiacao', periodEnd);
   }
 
   const { data, error } = await query;

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { fetchClientes } from '@/services/clientesService';
 import { fetchRelatorios, type ReportFilters } from '@/services/relatoriosService';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { formatCurrency, formatDateTime } from '@/utils/format';
+import { formatCurrency, formatDateOnly, formatDateTime } from '@/utils/format';
 import { Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { InputHTMLAttributes } from 'react';
@@ -78,6 +78,7 @@ export function RelatoriosPage() {
             <option value="">Todas as formas</option>
             <option value="Pix">Pix</option>
             <option value="Dinheiro">Dinheiro</option>
+            <option value="Carteira">Carteira</option>
           </Select>
           <Select value={filters.ferramenta} onChange={(event) => updateFilters({ ferramenta: event.target.value })}>
             <option value="">Todas as ferramentas</option>
@@ -116,7 +117,7 @@ export function RelatoriosPage() {
                 <TableCell>{item.tipo_ferramenta === 'Outros' ? item.outro_tipo || 'Outros' : item.tipo_ferramenta}</TableCell>
                 <TableCell>{item.forma_pagamento}</TableCell>
                 <TableCell>{formatCurrency(Number(item.valor))}</TableCell>
-                <TableCell>{formatDateTime(item.created_at)}</TableCell>
+                <TableCell>{formatDateOnly(item.data_afiacao ?? item.created_at)}</TableCell>
               </TableRow>
             ))}
             {!filtered.length ? <TableEmpty colSpan={5}>Nenhum resultado para os filtros atuais.</TableEmpty> : null}

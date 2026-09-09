@@ -7,6 +7,7 @@ type UserLike = Pick<User, 'id' | 'email' | 'user_metadata'>;
 const STORAGE_KEYS = {
   users: 'vibe-local-users',
   clientes: 'vibe-local-clientes',
+  materiais: 'vibe-local-materiais',
   afiacoes: 'vibe-local-afiacoes',
   auth: 'vibe-local-auth',
 };
@@ -14,6 +15,12 @@ const STORAGE_KEYS = {
 const DEMO_EMAIL = 'teste@vibeafiacoes.local';
 const DEMO_PASSWORD = 'teste1234';
 const DEMO_USERNAME = 'Teste Vibe';
+
+const demoMateriais: LocalRow[] = [
+  { id: crypto.randomUUID(), nome: 'Faca', valor: 15, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: crypto.randomUUID(), nome: 'Tesoura', valor: 20, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: crypto.randomUUID(), nome: 'Alicate de unha', valor: 12, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
 
 const demoClients: LocalRow[] = [
   {
@@ -42,6 +49,7 @@ const demoAfiacoes: LocalRow[] = [
     cliente_id: demoClients[0].id,
     tipo_ferramenta: 'Facas',
     outro_tipo: '',
+    data_afiacao: new Date().toISOString().slice(0, 10),
     valor: 45,
     forma_pagamento: 'Pix',
     observacoes: 'Entrega rápida',
@@ -53,6 +61,7 @@ const demoAfiacoes: LocalRow[] = [
     cliente_id: demoClients[1].id,
     tipo_ferramenta: 'Tesouras',
     outro_tipo: '',
+    data_afiacao: new Date().toISOString().slice(0, 10),
     valor: 60,
     forma_pagamento: 'Dinheiro',
     observacoes: 'Pagamento na retirada',
@@ -83,14 +92,29 @@ function writeJson<T>(key: string, value: T) {
 
 function seedLocalData() {
   const users = readJson<StoredUser[]>(STORAGE_KEYS.users, []);
-  const filteredUsers = users.filter((user) => user.email !== DEMO_EMAIL);
-  if (filteredUsers.length !== users.length) writeJson(STORAGE_KEYS.users, filteredUsers);
-
-  const session = getSession();
-  if (session?.user?.email === DEMO_EMAIL) setSession(null);
+  if (!users.some((user) => user.email === DEMO_EMAIL)) {
+    writeJson(STORAGE_KEYS.users, [
+      ...users,
+      {
+        id: crypto.randomUUID(),
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+        user_metadata: { username: DEMO_USERNAME },
+      },
+    ]);
+  }
 
   if (!readJson<LocalRow[]>(STORAGE_KEYS.clientes, []).length) writeJson(STORAGE_KEYS.clientes, demoClients);
-  if (!readJson<LocalRow[]>(STORAGE_KEYS.afiacoes, []).length) writeJson(STORAGE_KEYS.afiacoes, demoAfiacoes);
+  if (!readJson<LocalRow[]>(STORAGE_KEYS.materiais, []).length) writeJson(STORAGE_KEYS.materiais, demoMateriais);
+  const storedAfiacoes = readJson<LocalRow[]>(STORAGE_KEYS.afiacoes, []);
+  if (!storedAfiacoes.length) {
+    writeJson(STORAGE_KEYS.afiacoes, demoAfiacoes);
+  } else if (storedAfiacoes.some((item) => !item.data_afiacao)) {
+    writeJson(STORAGE_KEYS.afiacoes, storedAfiacoes.map((item) => ({
+      ...item,
+      data_afiacao: item.data_afiacao ?? item.created_at.slice(0, 10),
+    })));
+  }
 }
 
 seedLocalData();
@@ -144,7 +168,7 @@ class LocalQueryBuilder {
   private includeClientes = false;
   private returningSingle = false;
 
-  constructor(private readonly table: 'users' | 'clientes' | 'afiacoes') {}
+  constructor(private readonly table: 'users' | 'clientes' | 'materiais' | 'afiacoes') {}
 
   select(columns: string) {
     this.includeClientes = columns.includes('clientes(');
@@ -294,6 +318,9 @@ const localSupabase = {
     async getSession() {
       return { data: { session: getSession() } };
     },
+    async getUser() {
+      return { data: { user: getSession()?.user ?? null }, error: null };
+    },
     onAuthStateChange(callback: (_event: string, session: Session | null) => void) {
       const listener = (session: Session | null) => callback('SIGNED_IN', session);
       authListeners.add(listener);
@@ -349,16 +376,21 @@ const localSupabase = {
       return { error: null };
     },
   },
-  from(table: 'users' | 'clientes' | 'afiacoes') {
+  from(table: 'users' | 'clientes' | 'materiais' | 'afiacoes') {
     return new LocalQueryBuilder(table);
   },
 };
 
 const remoteSupabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const remoteSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const hasRemoteSupabase = Boolean(remoteSupabaseUrl && remoteSupabaseAnonKey);
 
-export const supabase = remoteSupabaseUrl && remoteSupabaseAnonKey
-  ? createClient(remoteSupabaseUrl, remoteSupabaseAnonKey, {
+if (!hasRemoteSupabase && !import.meta.env.DEV) {
+  throw new Error('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente de produção.');
+}
+
+export const supabase = hasRemoteSupabase
+  ? createClient(remoteSupabaseUrl!, remoteSupabaseAnonKey!, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,

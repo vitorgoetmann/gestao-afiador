@@ -10,8 +10,18 @@ import { Loading } from '@/components/ui/Loading';
 import { EmptyState } from '@/components/common/EmptyState';
 import { fetchDashboardData } from '@/services/dashboardService';
 import { formatCurrency } from '@/utils/format';
+import { parseISO } from 'date-fns';
 
-const COLORS = ['#0f7a3b', '#16a34a', '#22c55e', '#4ade80', '#86efac'];
+const CHART_COLORS = ['#2A5C8A', '#E76F51', '#F4A261', '#7B61A8', '#D1495B', '#5B8DB8'];
+
+function normalizeToolName(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'faca' || normalized === 'facas') return 'Facas';
+  if (normalized === 'tesoura' || normalized === 'tesouras') return 'Tesouras';
+  if (normalized === 'alicate de unha' || normalized === 'alicates de unha') return 'Alicates de unha';
+  if (normalized === 'alicate de corte' || normalized === 'alicates de corte') return 'Alicates de corte';
+  return value.trim() || 'Outros';
+}
 
 export function DashboardPage() {
   const { data, isLoading, isError, error } = useQuery({ queryKey: ['dashboard'], queryFn: fetchDashboardData });
@@ -26,14 +36,21 @@ export function DashboardPage() {
     const byTool = new Map<string, number>();
 
     afiacoes.forEach((item) => {
-      const date = new Date(item.created_at);
+      const date = parseISO(item.data_afiacao ?? item.created_at);
       const dayKey = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
       const monthKey = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date);
       byDay.set(dayKey, (byDay.get(dayKey) || 0) + Number(item.valor));
       byMonth.set(monthKey, (byMonth.get(monthKey) || 0) + Number(item.valor));
       byPayment.set(item.forma_pagamento, (byPayment.get(item.forma_pagamento) || 0) + Number(item.valor));
-      const tool = item.tipo_ferramenta === 'Outros' ? item.outro_tipo || 'Outros' : item.tipo_ferramenta;
+    if (item.itens?.length) {
+      item.itens.forEach((entry) => {
+        const tool = normalizeToolName(entry.nome);
+        byTool.set(tool, (byTool.get(tool) || 0) + Number(entry.quantidade || 1));
+      });
+    } else {
+      const tool = normalizeToolName(item.tipo_ferramenta === 'Outros' ? item.outro_tipo || 'Outros' : item.tipo_ferramenta);
       byTool.set(tool, (byTool.get(tool) || 0) + 1);
+    }
     });
 
     return {
@@ -153,8 +170,8 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => formatCurrency(Number(value)).replace(',00', '')} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
-                <Line type="monotone" dataKey="valor" stroke="#0f7a3b" strokeWidth={3} dot={false} />
+                <Tooltip cursor={false} formatter={(value) => formatCurrency(Number(value ?? 0))} />
+                <Line type="monotone" dataKey="valor" stroke="#2A5C8A" strokeWidth={3} dot={false} activeDot={{ fill: '#E76F51', stroke: '#ffffff', strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -169,10 +186,10 @@ export function DashboardPage() {
               <PieChart>
                 <Pie data={charts.payments} dataKey="valor" nameKey="name" innerRadius={60} outerRadius={100} paddingAngle={4}>
                   {charts.payments.map((entry, index) => (
-                    <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value ?? 0))} />
+                <Tooltip cursor={false} formatter={(value) => formatCurrency(Number(value ?? 0))} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -191,8 +208,10 @@ export function DashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip />
-                <Bar dataKey="valor" fill="#0f7a3b" radius={[10, 10, 0, 0]} />
+                <Tooltip cursor={false} />
+                <Bar dataKey="valor" radius={[10, 10, 0, 0]}>
+                  {charts.tools.map((entry, index) => <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

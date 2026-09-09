@@ -41,7 +41,7 @@ export default {
         '2xl': '1.5rem',
       },
       boxShadow: {
-        soft: '0 20px 45px -20px rgba(15, 122, 59, 0.35)',
+        soft: '0 20px 45px -20px rgba(42, 92, 138, 0.38)',
       },
     },
   },

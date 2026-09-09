@@ -12,6 +12,10 @@ export function formatDateTime(value: string) {
   return format(parseISO(value), 'dd/MM/yyyy HH:mm', { locale: ptBR });
 }
 
+export function formatDateOnly(value: string) {
+  return format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR });
+}
+
 export function formatPhone(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 10) {
@@ -26,6 +30,14 @@ export function onlyDigits(value: string) {
 
 export function sanitizeText(value: string) {
   return value.replace(/<[^>]*>/g, '').trim();
+}
+
+export function sanitizeSearchTerm(value: string) {
+  return value
+    .replace(/[,%().\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100);
 }
 
 export function parseMoney(value: string) {
