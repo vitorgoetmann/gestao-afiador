@@ -15,16 +15,18 @@ const STORAGE_KEYS = {
 const DEMO_EMAIL = 'teste@vibeafiacoes.local';
 const DEMO_PASSWORD = 'teste1234';
 const DEMO_USERNAME = 'Teste Vibe';
+const DEMO_USER_ID = '00000000-0000-4000-8000-000000000001';
 
 const demoMateriais: LocalRow[] = [
-  { id: crypto.randomUUID(), nome: 'Faca', valor: 15, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: crypto.randomUUID(), nome: 'Tesoura', valor: 20, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: crypto.randomUUID(), nome: 'Alicate de unha', valor: 12, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: crypto.randomUUID(), owner_id: DEMO_USER_ID, nome: 'Faca', valor: 15, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: crypto.randomUUID(), owner_id: DEMO_USER_ID, nome: 'Tesoura', valor: 20, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: crypto.randomUUID(), owner_id: DEMO_USER_ID, nome: 'Alicate de unha', valor: 12, observacoes: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const demoClients: LocalRow[] = [
   {
     id: crypto.randomUUID(),
+    owner_id: DEMO_USER_ID,
     nome: 'Mercado Central',
     telefone: '11999990000',
     endereco: 'Rua das Flores, 100',
@@ -34,6 +36,7 @@ const demoClients: LocalRow[] = [
   },
   {
     id: crypto.randomUUID(),
+    owner_id: DEMO_USER_ID,
     nome: 'Salão Estilo',
     telefone: '11988887777',
     endereco: 'Av. Paulista, 2000',
@@ -46,6 +49,7 @@ const demoClients: LocalRow[] = [
 const demoAfiacoes: LocalRow[] = [
   {
     id: crypto.randomUUID(),
+    owner_id: DEMO_USER_ID,
     cliente_id: demoClients[0].id,
     tipo_ferramenta: 'Facas',
     outro_tipo: '',
@@ -58,6 +62,7 @@ const demoAfiacoes: LocalRow[] = [
   },
   {
     id: crypto.randomUUID(),
+    owner_id: DEMO_USER_ID,
     cliente_id: demoClients[1].id,
     tipo_ferramenta: 'Tesouras',
     outro_tipo: '',
@@ -96,7 +101,7 @@ function seedLocalData() {
     writeJson(STORAGE_KEYS.users, [
       ...users,
       {
-        id: crypto.randomUUID(),
+        id: DEMO_USER_ID,
         email: DEMO_EMAIL,
         password: DEMO_PASSWORD,
         user_metadata: { username: DEMO_USERNAME },
@@ -104,15 +109,28 @@ function seedLocalData() {
     ]);
   }
 
-  if (!readJson<LocalRow[]>(STORAGE_KEYS.clientes, []).length) writeJson(STORAGE_KEYS.clientes, demoClients);
-  if (!readJson<LocalRow[]>(STORAGE_KEYS.materiais, []).length) writeJson(STORAGE_KEYS.materiais, demoMateriais);
+  const storedClientes = readJson<LocalRow[]>(STORAGE_KEYS.clientes, []);
+  if (!storedClientes.length) {
+    writeJson(STORAGE_KEYS.clientes, demoClients);
+  } else if (storedClientes.some((item) => !item.owner_id)) {
+    writeJson(STORAGE_KEYS.clientes, storedClientes.map((item) => ({ ...item, owner_id: DEMO_USER_ID })));
+  }
+
+  const storedMateriais = readJson<LocalRow[]>(STORAGE_KEYS.materiais, []);
+  if (!storedMateriais.length) {
+    writeJson(STORAGE_KEYS.materiais, demoMateriais);
+  } else if (storedMateriais.some((item) => !item.owner_id)) {
+    writeJson(STORAGE_KEYS.materiais, storedMateriais.map((item) => ({ ...item, owner_id: DEMO_USER_ID })));
+  }
+
   const storedAfiacoes = readJson<LocalRow[]>(STORAGE_KEYS.afiacoes, []);
   if (!storedAfiacoes.length) {
     writeJson(STORAGE_KEYS.afiacoes, demoAfiacoes);
-  } else if (storedAfiacoes.some((item) => !item.data_afiacao)) {
+  } else if (storedAfiacoes.some((item) => !item.data_afiacao || !item.owner_id)) {
     writeJson(STORAGE_KEYS.afiacoes, storedAfiacoes.map((item) => ({
       ...item,
       data_afiacao: item.data_afiacao ?? item.created_at.slice(0, 10),
+      owner_id: item.owner_id ?? DEMO_USER_ID,
     })));
   }
 }
@@ -290,14 +308,18 @@ class LocalQueryBuilder {
     }
 
     if (this.mutation?.type === 'update') {
-      const next = rows.map((row) => (row.id === this.mutation?.id ? { ...row, ...this.mutation.payload, updated_at: now } : row));
+      const next = rows.map((row) => (
+        row.id === this.mutation?.id && this.filters.every((filter) => filter(row))
+          ? { ...row, ...this.mutation.payload, updated_at: now }
+          : row
+      ));
       writeJson(STORAGE_KEYS[this.table], next);
-      const updated = next.find((row) => row.id === this.mutation?.id) ?? null;
+      const updated = next.find((row) => row.id === this.mutation?.id && this.filters.every((filter) => filter(row))) ?? null;
       return { data: this.returningSingle ? updated : [updated].filter(Boolean), error: null };
     }
 
     if (this.mutation?.type === 'delete') {
-      const next = rows.filter((row) => row.id !== this.mutation?.id);
+      const next = rows.filter((row) => !(row.id === this.mutation?.id && this.filters.every((filter) => filter(row))));
       writeJson(STORAGE_KEYS[this.table], next);
       return { data: null, error: null };
     }
@@ -334,11 +356,16 @@ const localSupabase = {
     },
     async signUp({ email, password, options }: { email: string; password: string; options?: { data?: { username?: string } } }) {
       const users = getUsers();
+      const normalizedEmail = email.trim().toLowerCase();
+      if (users.some((entry) => entry.email === normalizedEmail)) {
+        return { data: null, error: { message: 'Este e-mail jÃ¡ estÃ¡ cadastrado.' } };
+      }
+
       const user: StoredUser = {
         id: crypto.randomUUID(),
-        email,
+        email: normalizedEmail,
         password,
-        user_metadata: { username: options?.data?.username ?? email.split('@')[0] },
+        user_metadata: { username: options?.data?.username?.trim() ?? normalizedEmail.split('@')[0] },
       };
 
       users.push(user);
@@ -351,7 +378,8 @@ const localSupabase = {
       return { data: { user: session.user, session }, error: null };
     },
     async signInWithPassword({ email, password }: { email: string; password: string }) {
-      const user = getUsers().find((entry) => entry.email === email && entry.password === password);
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = getUsers().find((entry) => entry.email === normalizedEmail && entry.password === password);
       if (!user) return { data: null, error: { message: 'Credenciais inválidas.' } };
 
       const session = createSessionForUser(user);

@@ -4,6 +4,7 @@ dist
 .tsbuild/
 .tsbuildinfo
 *.tsbuildinfo
+supabase/.temp/
 .env
 .env.*
 !.env.example

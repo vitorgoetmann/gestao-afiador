@@ -2,11 +2,13 @@ import { supabase } from '@/lib/supabase';
 import type { AfiacaoComCliente, Cliente, DashboardStats } from '@/types/domain';
 import { inMonth, inToday, inWeek } from '@/utils/format';
 import { parseISO } from 'date-fns';
+import { getCurrentUserId } from '@/services/authService';
 
 export async function fetchDashboardData() {
+  const ownerId = await getCurrentUserId();
   const [clientesResult, afiacoesResult] = await Promise.all([
-    supabase.from('clientes').select('*').order('created_at', { ascending: false }),
-    supabase.from('afiacoes').select('*, clientes(id, nome, telefone)').order('created_at', { ascending: false }),
+    supabase.from('clientes').select('*').eq('owner_id', ownerId).order('created_at', { ascending: false }),
+    supabase.from('afiacoes').select('*, clientes(id, nome, telefone)').eq('owner_id', ownerId).order('created_at', { ascending: false }),
   ]);
 
   if (clientesResult.error) throw clientesResult.error;

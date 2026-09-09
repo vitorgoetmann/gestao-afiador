@@ -7,7 +7,8 @@ import { getCurrentUserId } from '@/services/authService';
 export type ClientePayload = Omit<Cliente, 'id' | 'created_at' | 'updated_at' | 'ultima_afiacao' | 'alerta_atrasado'>;
 
 export async function fetchClientes(search = '') {
-  let query = supabase.from('clientes').select('*').order('nome');
+  const ownerId = await getCurrentUserId();
+  let query = supabase.from('clientes').select('*').eq('owner_id', ownerId).order('nome');
 
   const safeSearch = sanitizeSearchTerm(search);
   if (safeSearch) {
@@ -16,7 +17,7 @@ export async function fetchClientes(search = '') {
 
   const [{ data, error }, { data: afiacoes, error: afiacoesError }] = await Promise.all([
     query,
-    supabase.from('afiacoes').select('cliente_id, data_afiacao, created_at'),
+    supabase.from('afiacoes').select('cliente_id, data_afiacao, created_at').eq('owner_id', ownerId),
   ]);
   if (error) throw error;
   if (afiacoesError) throw afiacoesError;
@@ -70,6 +71,7 @@ export async function createCliente(payload: ClientePayload) {
 }
 
 export async function updateCliente(id: string, payload: ClientePayload) {
+  const ownerId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('clientes')
     .update({
@@ -82,6 +84,7 @@ export async function updateCliente(id: string, payload: ClientePayload) {
       alerta_ciente_em: payload.alerta_ciente_em ?? null,
     })
     .eq('id', id)
+    .eq('owner_id', ownerId)
     .select('*')
     .single();
 
@@ -90,7 +93,8 @@ export async function updateCliente(id: string, payload: ClientePayload) {
 }
 
 export async function deleteCliente(id: string) {
-  const { error } = await supabase.from('clientes').delete().eq('id', id);
+  const ownerId = await getCurrentUserId();
+  const { error } = await supabase.from('clientes').delete().eq('id', id).eq('owner_id', ownerId);
   if (error) {
     if (error.code === '23503') {
       throw new Error('Este cliente possui afiações vinculadas. Exclua ou remova as afiações antes de excluir o cliente.');
@@ -101,9 +105,11 @@ export async function deleteCliente(id: string) {
 }
 
 export async function acknowledgeClienteAlert(id: string) {
+  const ownerId = await getCurrentUserId();
   const { error } = await supabase
     .from('clientes')
     .update({ alerta_ciente_em: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('owner_id', ownerId);
   if (error) throw error;
 }

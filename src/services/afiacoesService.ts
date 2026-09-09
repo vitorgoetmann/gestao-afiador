@@ -6,9 +6,11 @@ import { getCurrentUserId } from '@/services/authService';
 export type AfiacaoPayload = Omit<Afiacao, 'id' | 'created_at' | 'updated_at'>;
 
 export async function fetchAfiacoes(search = '') {
+  const ownerId = await getCurrentUserId();
   let query = supabase
     .from('afiacoes')
     .select('*, clientes(id, nome, telefone, endereco)')
+    .eq('owner_id', ownerId)
     .order('created_at', { ascending: false });
 
   const safeSearch = sanitizeSearchTerm(search);
@@ -46,6 +48,7 @@ export async function createAfiacao(payload: AfiacaoPayload) {
 }
 
 export async function updateAfiacao(id: string, payload: AfiacaoPayload) {
+  const ownerId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('afiacoes')
     .update({
@@ -61,6 +64,7 @@ export async function updateAfiacao(id: string, payload: AfiacaoPayload) {
       data_afiacao: payload.data_afiacao,
     })
     .eq('id', id)
+    .eq('owner_id', ownerId)
     .select('*, clientes(id, nome, telefone, endereco)')
     .single();
 
@@ -69,6 +73,7 @@ export async function updateAfiacao(id: string, payload: AfiacaoPayload) {
 }
 
 export async function deleteAfiacao(id: string) {
-  const { error } = await supabase.from('afiacoes').delete().eq('id', id);
+  const ownerId = await getCurrentUserId();
+  const { error } = await supabase.from('afiacoes').delete().eq('id', id).eq('owner_id', ownerId);
   if (error) throw error;
 }

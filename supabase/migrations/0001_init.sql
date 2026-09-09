@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
-  username text not null unique,
+  username text not null,
   email text not null unique,
   created_at timestamptz not null default now()
 );
@@ -63,7 +63,7 @@ begin
   insert into public.users (id, username, email)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1)),
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'username'), ''), split_part(new.email, '@', 1)),
     new.email
   )
   on conflict (id) do update

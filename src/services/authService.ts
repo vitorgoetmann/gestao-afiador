@@ -14,11 +14,14 @@ export type SignUpInput = {
 };
 
 export async function signUp({ username, email, password }: SignUpInput) {
+  const safeEmail = email.trim().toLowerCase();
+  const safeUsername = username.trim();
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: safeEmail,
     password,
     options: {
-      data: { username },
+      data: { username: safeUsername },
+      emailRedirectTo: `${window.location.origin}/login`,
     },
   });
 

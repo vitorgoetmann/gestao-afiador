@@ -1,3 +1,25 @@
+alter table public.users drop constraint if exists users_username_key;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.users (id, username, email)
+  values (
+    new.id,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'username'), ''), split_part(new.email, '@', 1)),
+    new.email
+  )
+  on conflict (id) do update
+  set username = excluded.username,
+      email = excluded.email;
+  return new;
+end;
+$$;
+
 alter table public.clientes add column if not exists owner_id uuid references auth.users(id) on delete cascade;
 alter table public.materiais add column if not exists owner_id uuid references auth.users(id) on delete cascade;
 alter table public.afiacoes add column if not exists owner_id uuid references auth.users(id) on delete cascade;
@@ -22,34 +44,6 @@ $$;
 alter table public.clientes alter column owner_id set not null;
 alter table public.materiais alter column owner_id set not null;
 alter table public.afiacoes alter column owner_id set not null;
-
-create index if not exists idx_clientes_owner_id on public.clientes(owner_id);
-create index if not exists idx_materiais_owner_id on public.materiais(owner_id);
-create index if not exists idx_afiacoes_owner_id on public.afiacoes(owner_id);
-
-create or replace function public.validate_afiacao_owner()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  client_owner uuid;
-begin
-  select owner_id into client_owner from public.clientes where id = new.cliente_id;
-  if client_owner is null or client_owner <> new.owner_id then
-    raise exception 'Cliente invalido para o proprietario atual';
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_afiacoes_owner on public.afiacoes;
-create trigger trg_afiacoes_owner
-before insert or update of cliente_id, owner_id on public.afiacoes
-for each row execute function public.validate_afiacao_owner();
-
-revoke execute on function public.validate_afiacao_owner() from public;
 
 alter table public.clientes enable row level security;
 alter table public.materiais enable row level security;
