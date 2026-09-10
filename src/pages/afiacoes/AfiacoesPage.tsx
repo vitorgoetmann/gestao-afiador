@@ -26,6 +26,7 @@ import { formatCurrency, formatDateOnly, formatDateTime } from '@/utils/format';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { ReciboAfiacao } from '@/components/afiacoes/ReciboAfiacao';
+import { shareOrDownloadReceiptPdf } from '@/utils/receiptPdf';
 
 const itemSchema = z.object({
   material_id: z.string().min(1),
@@ -74,6 +75,7 @@ export function AfiacoesPage() {
   const [open, setOpen] = useState(false);
   const [materialToAdd, setMaterialToAdd] = useState('');
   const [autoCalculate, setAutoCalculate] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const debouncedSearch = useDebounce(search);
 
   const { data, isLoading } = useQuery({ queryKey: ['afiacoes', debouncedSearch], queryFn: () => fetchAfiacoes(debouncedSearch) });
@@ -169,6 +171,20 @@ export function AfiacoesPage() {
     setMaterialToAdd('');
   }
 
+  async function handleExportPdf() {
+    if (!receipt) return;
+
+    setExportingPdf(true);
+    try {
+      await shareOrDownloadReceiptPdf(receipt);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      toast.error('Não foi possível exportar o PDF.');
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Afiações" description="Cadastre serviços, acompanhe valores e mantenha o histórico operacional organizado." actions={<><div className="w-full sm:w-80"><SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar afiação" /></div><Button onClick={startCreate}><Plus className="mr-2 h-4 w-4" />Nova afiação</Button></>} />
@@ -221,7 +237,7 @@ export function AfiacoesPage() {
         {receipt ? <ReciboAfiacao afiacao={receipt} /> : null}
         <div className="mt-5 flex justify-end gap-3 border-t border-border pt-5">
           <Button type="button" variant="secondary" onClick={() => setReceipt(null)}>Fechar</Button>
-          <Button type="button" variant="secondary" onClick={() => window.print()}><Download className="mr-2 h-4 w-4" />Exportar PDF</Button>
+          <Button type="button" variant="secondary" onClick={handleExportPdf} disabled={exportingPdf}><Download className="mr-2 h-4 w-4" />{exportingPdf ? 'Gerando...' : 'Exportar PDF'}</Button>
           <Button type="button" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir recibo</Button>
         </div>
       </Modal>
