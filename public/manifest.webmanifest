@@ -1,0 +1,19 @@
+{
+  "name": "Vibe Afiações",
+  "short_name": "Vibe",
+  "description": "Gestão profissional de afiações",
+  "start_url": "/app/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#1A2E4A",
+  "icons": [
+    {
+      "src": "/logo-vibe.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
