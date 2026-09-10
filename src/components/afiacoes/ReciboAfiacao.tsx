@@ -20,7 +20,7 @@ export function ReciboAfiacao({ afiacao }: { afiacao: AfiacaoComCliente }) {
     <article data-print-receipt className="receipt-sheet mx-auto bg-white p-4 text-neutral-900 sm:p-6">
       <header className="flex items-start justify-between gap-4 border-b-2 border-neutral-900 pb-3">
         <div className="flex items-center gap-3">
-          <img src="/logo-vibe.svg" alt="Vibe Afiações" className="h-14 w-14 rounded-full object-contain" />
+          <img src="/logo.png" alt="Vibe Afiações" className="h-16 w-16 rounded-full object-contain" />
           <div>
             <p className="text-xl font-bold">Vibe Afiações</p>
             <p className="text-xs text-neutral-600">Serviços de afiação</p>
