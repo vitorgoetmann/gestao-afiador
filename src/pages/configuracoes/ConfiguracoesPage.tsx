@@ -90,6 +90,37 @@ export function ConfiguracoesPage() {
         actions={<Button onClick={startExpense}><Plus className="mr-2 h-4 w-4" />Adicionar despesa</Button>}
       />
 
+      <DataTable title="Despesas" description="Valores abatidos do faturamento no dashboard." loading={isLoading} empty={!despesas.length}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeader>Data</TableHeader>
+              <TableHeader>Motivo</TableHeader>
+              <TableHeader>Valor</TableHeader>
+              <TableHeader className="text-right">Ações</TableHeader>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {despesas.map((despesa: Despesa) => (
+              <TableRow key={despesa.id}>
+                <TableCell>{formatDateOnly(despesa.data_despesa)}</TableCell>
+                <TableCell className="font-medium">{despesa.motivo}</TableCell>
+                <TableCell>{formatCurrency(Number(despesa.valor))}</TableCell>
+                <TableCell>
+                  <div className="flex justify-end">
+                    <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(despesa.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!despesas.length ? <TableEmpty colSpan={4}>Nenhuma despesa cadastrada.</TableEmpty> : null}
+          </TableBody>
+        </Table>
+      </DataTable>
+
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
@@ -123,37 +154,6 @@ export function ConfiguracoesPage() {
           </CardContent>
         </Card>
       </div>
-
-      <DataTable title="Despesas" description="Valores abatidos do faturamento no dashboard." loading={isLoading} empty={!despesas.length}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeader>Data</TableHeader>
-              <TableHeader>Motivo</TableHeader>
-              <TableHeader>Valor</TableHeader>
-              <TableHeader className="text-right">Ações</TableHeader>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {despesas.map((despesa: Despesa) => (
-              <TableRow key={despesa.id}>
-                <TableCell>{formatDateOnly(despesa.data_despesa)}</TableCell>
-                <TableCell className="font-medium">{despesa.motivo}</TableCell>
-                <TableCell>{formatCurrency(Number(despesa.valor))}</TableCell>
-                <TableCell>
-                  <div className="flex justify-end">
-                    <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(despesa.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!despesas.length ? <TableEmpty colSpan={4}>Nenhuma despesa cadastrada.</TableEmpty> : null}
-          </TableBody>
-        </Table>
-      </DataTable>
 
       <Modal open={openExpense} title="Adicionar despesa" description="Cadastre uma despesa para abater do faturamento." onClose={() => setOpenExpense(false)}>
         <form className="space-y-4" onSubmit={handleSubmit((values) => createMutation.mutate(values))}>
