@@ -126,7 +126,7 @@ select {
 @media print {
   @page {
     size: A4;
-    margin: 14mm;
+    margin: 8mm;
   }
 
   body {

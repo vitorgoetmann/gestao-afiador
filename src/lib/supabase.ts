@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   clientes: 'vibe-local-clientes',
   materiais: 'vibe-local-materiais',
   afiacoes: 'vibe-local-afiacoes',
+  despesas: 'vibe-local-despesas',
   auth: 'vibe-local-auth',
 };
 
@@ -133,6 +134,11 @@ function seedLocalData() {
       owner_id: item.owner_id ?? DEMO_USER_ID,
     })));
   }
+
+  const storedDespesas = readJson<LocalRow[]>(STORAGE_KEYS.despesas, []);
+  if (storedDespesas.some((item) => !item.owner_id)) {
+    writeJson(STORAGE_KEYS.despesas, storedDespesas.map((item) => ({ ...item, owner_id: DEMO_USER_ID })));
+  }
 }
 
 seedLocalData();
@@ -186,7 +192,7 @@ class LocalQueryBuilder {
   private includeClientes = false;
   private returningSingle = false;
 
-  constructor(private readonly table: 'users' | 'clientes' | 'materiais' | 'afiacoes') {}
+  constructor(private readonly table: 'users' | 'clientes' | 'materiais' | 'afiacoes' | 'despesas') {}
 
   select(columns: string) {
     this.includeClientes = columns.includes('clientes(');
@@ -404,7 +410,7 @@ const localSupabase = {
       return { error: null };
     },
   },
-  from(table: 'users' | 'clientes' | 'materiais' | 'afiacoes') {
+  from(table: 'users' | 'clientes' | 'materiais' | 'afiacoes' | 'despesas') {
     return new LocalQueryBuilder(table);
   },
 };

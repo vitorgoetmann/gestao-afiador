@@ -30,6 +30,7 @@ export function DashboardPage() {
 
   const charts = useMemo(() => {
     const afiacoes = data?.afiacoes ?? [];
+    const despesas = data?.despesas ?? [];
     const byDay = new Map<string, number>();
     const byMonth = new Map<string, number>();
     const byPayment = new Map<string, number>();
@@ -53,13 +54,21 @@ export function DashboardPage() {
     }
     });
 
+    despesas.forEach((item) => {
+      const date = parseISO(item.data_despesa);
+      const dayKey = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+      const monthKey = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date);
+      byDay.set(dayKey, (byDay.get(dayKey) || 0) - Number(item.valor));
+      byMonth.set(monthKey, (byMonth.get(monthKey) || 0) - Number(item.valor));
+    });
+
     return {
       daily: Array.from(byDay.entries()).slice(-7).map(([name, valor]) => ({ name, valor })),
       monthly: Array.from(byMonth.entries()).slice(-6).map(([name, valor]) => ({ name, valor })),
       payments: Array.from(byPayment.entries()).map(([name, valor]) => ({ name, valor })),
       tools: Array.from(byTool.entries()).slice(0, 5).map(([name, valor]) => ({ name, valor })),
     };
-  }, [data?.afiacoes]);
+  }, [data?.afiacoes, data?.despesas]);
 
   const revenueSlides = useMemo(
     () => [

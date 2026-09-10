@@ -61,12 +61,23 @@ export type AfiacaoComCliente = Afiacao & {
   clientes?: Pick<Cliente, 'id' | 'nome' | 'telefone' | 'endereco'> | null;
 };
 
+export type Despesa = {
+  id: UUID;
+  data_despesa: string;
+  motivo: string;
+  valor: number;
+  created_at: string;
+  updated_at: string;
+  owner_id?: UUID;
+};
+
 export type DashboardStats = {
   faturamentoTotal: number;
   faturamentoHoje: number;
   faturamentoSemana: number;
   faturamentoMes: number;
   faturamentoAno: number;
+  despesasTotal: number;
   clientes: number;
   afiacoes: number;
   ticketMedio: number;

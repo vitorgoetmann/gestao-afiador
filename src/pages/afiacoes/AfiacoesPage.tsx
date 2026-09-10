@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Calculator, Edit2, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
+import { Calculator, Download, Edit2, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { SearchInput } from '@/components/common/SearchInput';
 import { Button } from '@/components/ui/Button';
@@ -221,6 +221,7 @@ export function AfiacoesPage() {
         {receipt ? <ReciboAfiacao afiacao={receipt} /> : null}
         <div className="mt-5 flex justify-end gap-3 border-t border-border pt-5">
           <Button type="button" variant="secondary" onClick={() => setReceipt(null)}>Fechar</Button>
+          <Button type="button" variant="secondary" onClick={() => window.print()}><Download className="mr-2 h-4 w-4" />Exportar PDF</Button>
           <Button type="button" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir recibo</Button>
         </div>
       </Modal>
