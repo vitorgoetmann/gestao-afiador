@@ -89,15 +89,18 @@ export async function createReceiptPdf(afiacao: AfiacaoComCliente) {
     y += line.length > 90 ? 8 : 5;
   });
 
-  y += 4;
+  y += 6;
   doc.setFillColor(238, 246, 255);
-  doc.rect(margin, y, pageWidth - margin * 2, 8, 'F');
+  doc.rect(margin, y, pageWidth - margin * 2, 7, 'F');
+  doc.setDrawColor(214, 224, 236);
+  doc.setLineWidth(0.2);
+  doc.line(margin, y + 7, pageWidth - margin, y + 7);
   doc.setFont('helvetica', 'bold');
-  doc.text('Descrição', margin + 2, y + 5.5);
-  doc.text('Qtd.', 120, y + 5.5, { align: 'center' });
-  doc.text('Unitário', 153, y + 5.5, { align: 'right' });
-  doc.text('Total', pageWidth - margin - 2, y + 5.5, { align: 'right' });
-  y += 10;
+  doc.text('Descrição', margin + 2, y + 4.8);
+  doc.text('Qtd.', 120, y + 4.8, { align: 'center' });
+  doc.text('Unitário', 153, y + 4.8, { align: 'right' });
+  doc.text('Total', pageWidth - margin - 2, y + 4.8, { align: 'right' });
+  y += 13;
 
   doc.setFont('helvetica', 'normal');
   items.forEach((item) => {
@@ -106,10 +109,14 @@ export async function createReceiptPdf(afiacao: AfiacaoComCliente) {
     doc.text(String(item.quantidade), 120, y, { align: 'center' });
     doc.text(formatCurrency(Number(item.valor_unitario)), 153, y, { align: 'right' });
     doc.text(formatCurrency(total), pageWidth - margin - 2, y, { align: 'right' });
-    y += 7;
+    doc.setDrawColor(232, 232, 232);
+    doc.line(margin, y + 3, pageWidth - margin, y + 3);
+    y += 8;
   });
 
-  y += 4;
+  y += 6;
+  doc.setDrawColor(12, 31, 76);
+  doc.setLineWidth(0.6);
   doc.line(118, y, pageWidth - margin, y);
   y += 6;
   doc.text('Subtotal', 125, y);
