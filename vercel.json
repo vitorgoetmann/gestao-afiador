@@ -11,9 +11,12 @@
       ]
     }
   ],
+  "functions": {
+    "api/places.py": { "maxDuration": 60 }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

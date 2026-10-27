@@ -10,4 +10,7 @@ supabase/.temp/
 !.env.example
 .DS_Store
 coverage
+.venv-leads/
+__pycache__/
+*.pyc
 *.log

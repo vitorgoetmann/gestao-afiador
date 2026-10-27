@@ -50,3 +50,19 @@ npm install
 cp .env.example .env
 npm run dev
 ```
+
+## Encontrar clientes
+
+A aba **Encontrar clientes** consulta dados abertos da Overture Maps por município brasileiro (`Cidade, UF`). Usa IBGE e Photon para localizar o município e o catálogo Overture para buscar estabelecimentos e telefones. Não precisa de chave nem faturamento. A tela também abre pesquisas no Google Maps por link, sem Places API.
+
+A mensagem de WhatsApp fica no navegador do usuário. A existência de WhatsApp no número informado não é verificada. Os resultados dependem da cobertura e atualização dos dados públicos. Os dados da [Overture Maps](https://docs.overturemaps.org/attribution/) recebem atribuição na interface.
+
+Para ativar a busca em outra máquina, instale Python e execute na raiz do projeto:
+
+```powershell
+python -m venv .venv-leads
+.\.venv-leads\Scripts\python.exe -m pip install -r requirements.txt
+npm run dev
+```
+
+Em Linux ou macOS, use `.venv-leads/bin/python -m pip install -r requirements.txt`. O processo do servidor precisa acessar a internet. Na Vercel, a função Python instala as dependências de `requirements.txt` e valida a sessão com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` configuradas no projeto. A rotação de resultados acontece no navegador enquanto a busca estiver aberta.

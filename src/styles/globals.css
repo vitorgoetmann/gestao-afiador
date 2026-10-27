@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes lead-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+.lead-progress-bar {
+  animation: lead-progress 1.4s ease-in-out infinite;
+}
+
 :root {
   color-scheme: light;
   --background: 0 0% 98%;

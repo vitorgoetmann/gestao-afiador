@@ -12,6 +12,7 @@ import { AfiacoesPage } from '@/pages/afiacoes/AfiacoesPage';
 import { RelatoriosPage } from '@/pages/relatorios/RelatoriosPage';
 import { ConfiguracoesPage } from '@/pages/configuracoes/ConfiguracoesPage';
 import { MateriaisPage } from '@/pages/materiais/MateriaisPage';
+import { EncontrarClientesPage } from '@/pages/leads/EncontrarClientesPage';
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'clientes', element: <ClientesPage /> },
+          { path: 'encontrar-clientes', element: <EncontrarClientesPage /> },
           { path: 'materiais', element: <MateriaisPage /> },
           { path: 'afiacoes', element: <AfiacoesPage /> },
           { path: 'relatorios', element: <RelatoriosPage /> },

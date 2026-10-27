@@ -1,6 +1,6 @@
 import { useState, type ComponentType } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { BarChart3, Users, Scissors, FileText, Settings, Menu, LogOut, SunMedium, MoonStar, Package } from 'lucide-react';
+import { BarChart3, Users, UserSearch, Scissors, FileText, Settings, Menu, LogOut, SunMedium, MoonStar, Package } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { signOut } from '@/services/authService';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 const navItems = [
   { to: '/app/dashboard', label: 'Dashboard', icon: BarChart3 },
   { to: '/app/clientes', label: 'Clientes', icon: Users },
+  { to: '/app/encontrar-clientes', label: 'Encontrar clientes', mobileLabel: 'Encontrar', icon: UserSearch },
   { to: '/app/materiais', label: 'Materiais', mobileLabel: 'Itens', icon: Package },
   { to: '/app/afiacoes', label: 'Afiações', icon: Scissors },
   { to: '/app/relatorios', label: 'Relatórios', icon: FileText },
@@ -113,7 +114,7 @@ export function AppLayout() {
         </main>
 
         <nav className="sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
-          <div className="grid grid-cols-6 gap-1 px-1.5 py-2">
+          <div className="grid grid-cols-7 gap-1 px-1.5 py-2">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
