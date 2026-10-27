@@ -1,68 +1,46 @@
-# Gestão Afiador
-Plataforma de gerenciamento operacional e financeiro exclusiva para oficinas e profissionais de afiação de ferramentas.
+# Vibe Afiações
 
-## Sobre o Projeto
-O Gestão Afiador é um sistema web desenvolvido para digitalizar o fluxo de trabalho de afiadores. A aplicação centraliza o registro de todos os serviços realizados (afiações), o cadastro e histórico de clientes, além de fornecer um painel com métricas atualizadas de faturamento e volume de serviços.
+Sistema web para organizar o trabalho de uma oficina de afiação. Reúne clientes, materiais, serviços, recibos e controle financeiro em uma interface para computador e celular.
 
-## Contexto e Problema Resolvido
-Este projeto existe para eliminar a desorganização e a perda de informações causadas pelo uso de controles manuais e anotações em papel. A principal dor que ele resolve é a dificuldade do afiador em rastrear quais ferramentas foram afiadas para quais clientes, além de simplificar o controle financeiro de pagamentos pendentes e concluídos.
+## Funcionalidades
 
-## Arquitetura e Tecnologias
-* **React e TypeScript**: Construção de interface de usuário estruturada com tipagem estática, garantindo manutenção segura do código.
-* **Vite**: Build tool responsável pelo ambiente de desenvolvimento ágil e empacotamento otimizado.
-* **Tailwind CSS**: Estilização baseada em utilitários para consistência de design e responsividade.
-* **Supabase**: Provedor de Backend as a Service (BaaS) responsável pela persistência de dados relacionais e gerenciamento de sessões.
-* **TanStack Query (React Query)**: Camada de gerenciamento de estado assíncrono e cache de dados.
-* **Recharts**: Biblioteca para renderização de gráficos operacionais no painel de controle.
+- **Dashboard:** mostra faturamento por dia, semana, mês e ano, quantidade de clientes e serviços, formas de pagamento e ferramentas mais afiadas. As despesas entram no cálculo do saldo.
+- **Clientes:** guarda telefone, endereço e observações. É possível definir um prazo de retorno em meses; quando ele vence, aparece um alerta que pode ser marcado como visto.
+- **Materiais:** mantém os itens atendidos pela oficina e seus preços padrão. Esses valores preenchem os itens de uma nova afiação.
+- **Afiações:** registra cliente, data, itens, quantidades, desconto, pagamento e observações. O histórico permite editar o serviço, imprimir o recibo ou gerar um PDF.
+- **Relatórios:** filtra as afiações por período, cliente, ferramenta e forma de pagamento. Mostra quantidade de serviços, faturamento e valor médio do recorte escolhido.
+- **Encontrar clientes:** pesquisa estabelecimentos por atividade e cidade brasileira no formato `Cidade, UF`. O limite escolhido define quantos resultados aparecem por vez. **Mostrar novos resultados** exibe outra leva dos estabelecimentos encontrados, sem repetir os anteriores durante a mesma busca. O botão de WhatsApp abre uma conversa com a mensagem configurada na tela; `{empresa}` insere o nome do estabelecimento. Quando disponíveis, também aparecem links para o mapa, site e rede social.
+- **Configurações:** registra despesas, alterna o tema claro ou escuro e permite sair da conta.
 
-## Diferenciais
-* **Gestão de Estado Otimizada**: Integração do React Query para reduzir requisições redundantes ao Supabase e proporcionar navegação fluida.
-* **Segurança e Validação**: Uso do Zod e React Hook Form para validação estrita de dados na entrada, prevenindo inconsistências no banco de dados.
-* **Responsividade Híbrida**: Layout adaptável para uso tanto em terminais fixos (desktop) quanto em dispositivos móveis no chão de fábrica.
+A busca de estabelecimentos usa dados abertos da Overture Maps e localiza a cidade pelo Photon. O link **Pesquisar no Google Maps** abre uma pesquisa em outra aba; a busca automática não usa a API do Google. Telefones e outros dados podem estar ausentes ou desatualizados, e o sistema não confirma se um número possui WhatsApp. A mensagem de contato e os filtros de relatório ficam salvos no navegador.
 
-## Infraestrutura e Hospedagem
-* **Frontend (Hospedagem)**: A aplicação está hospedada na **Vercel**, garantindo entrega contínua (CI/CD) e alta disponibilidade.
-* **Backend (Banco de Dados)**: A infraestrutura de dados e autenticação é gerenciada pelo **Supabase**, operando com um banco de dados relacional (PostgreSQL).
+## Como rodar
 
-## Status do Projeto
-Em desenvolvimento (MVP).
+É preciso ter Node.js, Python e acesso à internet. Na raiz do projeto:
 
-## Telas do Sistema
-
-### Dashboard
-![Dashboard Desktop](docs/dashboard-noPC.png)
-![Dashboard Mobile](docs/dashboard-noCELL.png)
-
-### Gestão de Clientes
-![Clientes Desktop](docs/clientes-noPC.png)
-![Clientes Mobile](docs/clientes-noCELL.png)
-
-### Histórico de Afiações e Relatórios
-![Afiações Mobile](docs/afiacoes-noCELL.png)
-![Relatórios Desktop](docs/relatorios-noPC.png)
-
-## Licença
-Este projeto possui direitos reservados ao seu autor.
-
-## Início Rápido
 ```bash
 npm install
-cp .env.example .env
-npm run dev
+python -m venv .venv-leads
 ```
 
-## Encontrar clientes
-
-A aba **Encontrar clientes** consulta dados abertos da Overture Maps por município brasileiro (`Cidade, UF`). Usa o Photon para localizar o município e o catálogo Overture para buscar estabelecimentos e telefones. Não precisa de chave nem faturamento. A tela também abre pesquisas no Google Maps por link, sem Places API.
-
-A mensagem de WhatsApp fica no navegador do usuário. A existência de WhatsApp no número informado não é verificada. Os resultados dependem da cobertura e atualização dos dados públicos. Os dados da [Overture Maps](https://docs.overturemaps.org/attribution/) recebem atribuição na interface.
-
-Para ativar a busca em outra máquina, instale Python e execute na raiz do projeto:
+Instale a dependência da busca:
 
 ```powershell
-python -m venv .venv-leads
+# Windows
 .\.venv-leads\Scripts\python.exe -m pip install -r requirements.txt
-npm run dev
 ```
 
-Em Linux ou macOS, use `.venv-leads/bin/python -m pip install -r requirements.txt`. O processo do servidor precisa acessar a internet. Na Vercel, a função Python instala as dependências de `requirements.txt` e valida a sessão com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` configuradas no projeto. A rotação de resultados acontece no navegador enquanto a busca estiver aberta.
+```bash
+# Linux ou macOS
+.venv-leads/bin/python -m pip install -r requirements.txt
+```
+
+Execute `npm run dev`. Sem variáveis de ambiente, o desenvolvimento usa dados de demonstração guardados no navegador. Para usar um projeto Supabase, copie `.env.example` para `.env` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Não coloque a chave `service_role` no frontend.
+
+Para iniciar um banco novo, aplique as migrações de `supabase/migrations` na ordem numérica. Em produção, login, clientes, afiações, materiais e despesas usam o Supabase. Cada conta acessa seus próprios registros.
+
+## Publicação
+
+O frontend e a rota `/api/places` rodam na Vercel. Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no projeto antes do build. A rota de busca valida a sessão no Supabase e usa a dependência Python de `requirements.txt`. O servidor precisa conseguir acessar Photon e Overture Maps.
+
+Dados de estabelecimentos: [Overture Maps](https://docs.overturemaps.org/attribution/).

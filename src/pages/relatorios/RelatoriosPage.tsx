@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/common/PageHeader';
+import { SearchInput } from '@/components/common/SearchInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import { DataTable } from '@/components/common/DataTable';
@@ -11,10 +12,6 @@ import { fetchClientes } from '@/services/clientesService';
 import { fetchRelatorios, type ReportFilters } from '@/services/relatoriosService';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { formatCurrency, formatDateOnly, formatDateTime } from '@/utils/format';
-import { Search } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { InputHTMLAttributes } from 'react';
-import { writeStorage } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 
 const defaultFilters: ReportFilters = {
@@ -29,7 +26,6 @@ const defaultFilters: ReportFilters = {
 export function RelatoriosPage() {
   const [filters, setFilters] = useLocalStorage<ReportFilters>('vibe-relatorio-filtros', defaultFilters);
   const [query, setQuery] = useState('');
-  const queryClient = useQueryClient();
   const { data: clientes = [] } = useQuery({ queryKey: ['clientes-report'], queryFn: () => fetchClientes() });
 
   const { data, isLoading, isError } = useQuery({ queryKey: ['relatorios', filters], queryFn: () => fetchRelatorios(filters) });
@@ -43,10 +39,7 @@ export function RelatoriosPage() {
   const total = filtered.reduce((sum, item) => sum + Number(item.valor), 0);
 
   function updateFilters(next: Partial<ReportFilters>) {
-    const merged = { ...filters, ...next };
-    setFilters(merged);
-    writeStorage('vibe-relatorio-filtros', merged);
-    queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+    setFilters({ ...filters, ...next });
   }
 
   if (isError) return <EmptyState title="Erro ao carregar relatórios" description="Não foi possível consultar os dados agora." />;
@@ -156,15 +149,6 @@ export function RelatoriosPage() {
           ))}
         </div>
       </DataTable>
-    </div>
-  );
-}
-
-function SearchInput(props: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input {...props} className="pl-11" />
     </div>
   );
 }

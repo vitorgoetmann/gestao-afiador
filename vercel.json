@@ -12,7 +12,7 @@
     }
   ],
   "functions": {
-    "api/places.py": { "maxDuration": 60, "excludeFiles": "{node_modules/**,dist/**,docs/**,public/**,src/**,**/__pycache__/**,**/*.test.*,**/test_*.py}" }
+    "api/places.py": { "maxDuration": 60, "excludeFiles": "{node_modules/**,dist/**,public/**,src/**,**/__pycache__/**,**/*.test.*,**/test_*.py}" }
   },
   "rewrites": [
     {
