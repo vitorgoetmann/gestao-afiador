@@ -53,7 +53,7 @@ npm run dev
 
 ## Encontrar clientes
 
-A aba **Encontrar clientes** consulta dados abertos da Overture Maps por município brasileiro (`Cidade, UF`). Usa IBGE e Photon para localizar o município e o catálogo Overture para buscar estabelecimentos e telefones. Não precisa de chave nem faturamento. A tela também abre pesquisas no Google Maps por link, sem Places API.
+A aba **Encontrar clientes** consulta dados abertos da Overture Maps por município brasileiro (`Cidade, UF`). Usa o Photon para localizar o município e o catálogo Overture para buscar estabelecimentos e telefones. Não precisa de chave nem faturamento. A tela também abre pesquisas no Google Maps por link, sem Places API.
 
 A mensagem de WhatsApp fica no navegador do usuário. A existência de WhatsApp no número informado não é verificada. Os resultados dependem da cobertura e atualização dos dados públicos. Os dados da [Overture Maps](https://docs.overturemaps.org/attribution/) recebem atribuição na interface.
 

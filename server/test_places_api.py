@@ -9,7 +9,7 @@ import urllib.request
 from http.server import HTTPServer
 from unittest.mock import patch
 
-from api.places import get_json, handler
+from api.places import RequestError, find_city_and_bounds, get_json, handler
 
 
 def fake_get_json(url, headers=None):
@@ -17,12 +17,19 @@ def fake_get_json(url, headers=None):
         if headers['Authorization'] != 'Bearer valid-token':
             raise urllib.error.HTTPError(url, 401, 'invalid', {}, None)
         return {'id': 'user-id'}
-    if 'ibge.gov.br' in url:
-        return [{'nome': 'Palhoça', 'microrregiao': {'mesorregiao': {'UF': {'nome': 'Santa Catarina'}}}}]
-    return {'features': [{'properties': {'name': 'Palhoça', 'state': 'Santa Catarina', 'countrycode': 'BR', 'extent': [-48.8, -27.6, -48.5, -27.9]}}]}
+    return {'features': [{'properties': {'name': 'Palhoça', 'state': 'Santa Catarina', 'countrycode': 'BR', 'type': 'city', 'extent': [-48.8, -27.6, -48.5, -27.9]}}]}
 
 
 class PlacesApiTests(unittest.TestCase):
+    def test_city_and_state_must_match_the_photon_result(self):
+        with patch('api.places.get_json', side_effect=fake_get_json) as fetch:
+            city, uf, bbox = find_city_and_bounds('PALHOCA, SC')
+            self.assertEqual((city, uf), ('Palhoça', 'SC'))
+            self.assertEqual(bbox, [-48.8, -27.9, -48.5, -27.6])
+            self.assertIn('photon.komoot.io', fetch.call_args.args[0])
+            with self.assertRaises(RequestError):
+                find_city_and_bounds('Palhoça, SP')
+
     def test_compressed_provider_response(self):
         class Response(io.BytesIO):
             headers = {'Content-Encoding': 'gzip'}

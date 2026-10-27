@@ -2,9 +2,15 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const UF = new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
+const STATES = {
+  AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia', CE: 'Ceará',
+  DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão', MT: 'Mato Grosso',
+  MS: 'Mato Grosso do Sul', MG: 'Minas Gerais', PA: 'Pará', PB: 'Paraíba', PR: 'Paraná',
+  PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro', RN: 'Rio Grande do Norte',
+  RS: 'Rio Grande do Sul', RO: 'Rondônia', RR: 'Roraima', SC: 'Santa Catarina',
+  SP: 'São Paulo', SE: 'Sergipe', TO: 'Tocantins',
+};
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const cityCache = new Map();
 const resultCache = new Map();
 
 export class PlacesError extends Error {
@@ -27,20 +33,11 @@ async function getJson(url) {
   return response.json();
 }
 
-async function findCity(region) {
+function findCity(region) {
   const match = region.match(/^(.+?)[,\s]+([a-zA-Z]{2})$/);
-  if (!match || !UF.has(match[2].toUpperCase())) throw new PlacesError('Informe a região como Cidade, UF. Ex.: Palhoça, SC.');
-  const name = normalized(match[1]);
+  if (!match || !Object.hasOwn(STATES, match[2].toUpperCase())) throw new PlacesError('Informe a região como Cidade, UF. Ex.: Palhoça, SC.');
   const uf = match[2].toUpperCase();
-  let cached = cityCache.get(uf);
-  if (!cached || cached.expires < Date.now()) {
-    const cities = await getJson(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`);
-    cached = { cities, expires: Date.now() + 86400000 };
-    cityCache.set(uf, cached);
-  }
-  const city = cached.cities.find((item) => normalized(item.nome) === name);
-  if (!city) throw new PlacesError(`Município não encontrado em ${uf}. Confira o nome da cidade.`);
-  return { name: city.nome, state: city.microrregiao?.mesorregiao?.UF?.nome ?? uf, uf, id: city.id };
+  return { name: match[1].trim(), state: STATES[uf], uf };
 }
 
 async function getCityBounds(city) {
@@ -49,10 +46,10 @@ async function getCityBounds(city) {
   const data = await getJson(url);
   const match = data.features?.find(({ properties: p }) =>
     normalized(p.name ?? '') === normalized(city.name) && normalized(p.state ?? '') === normalized(city.state)
-      && p.countrycode === 'BR' && p.extent?.length === 4);
+      && p.countrycode === 'BR' && p.type === 'city' && p.extent?.length === 4);
   if (!match) throw new PlacesError('Não foi possível localizar os limites dessa cidade no mapa aberto.', 404);
   const [west, north, east, south] = match.properties.extent;
-  return [west, south, east, north];
+  return { bbox: [west, south, east, north], name: match.properties.name };
 }
 
 function queryOverture(input) {
@@ -83,13 +80,13 @@ export async function searchPlaces(input) {
   if (!keyword || keyword.length > 80 || !region || region.length > 120 || !Number.isInteger(limit) || limit < 1 || limit > 60) {
     throw new PlacesError('Informe palavra-chave, região e quantidade de 1 a 60 resultados.');
   }
-  const city = await findCity(region);
-  const key = `${city.id}:${normalized(keyword)}`;
+  const city = findCity(region);
+  const key = `${city.uf}:${normalized(city.name)}:${normalized(keyword)}`;
   const cached = resultCache.get(key);
   let places = cached?.expires > Date.now() ? cached.places : undefined;
   if (!places) {
-    const bbox = await getCityBounds(city);
-    const data = await queryOverture({ keyword, city: city.name, uf: city.uf, bbox });
+    const location = await getCityBounds(city);
+    const data = await queryOverture({ keyword, city: location.name, uf: city.uf, bbox: location.bbox });
     places = data.places.map((place) => ({
       ...place,
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, ${place.address}`)}`,

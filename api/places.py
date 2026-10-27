@@ -9,7 +9,15 @@ from http.server import BaseHTTPRequestHandler
 
 from server.overture_search import normalize, search_overture
 
-STATES = set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split())
+STATES = {
+    'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+    'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+    'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+    'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+    'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+    'SE': 'Sergipe', 'TO': 'Tocantins',
+}
 
 
 class RequestError(Exception):
@@ -49,22 +57,19 @@ def find_city_and_bounds(region):
     if not match or match.group(2).upper() not in STATES:
         raise RequestError('Informe a região como Cidade, UF. Ex.: Palhoça, SC.', 400)
     city_name, uf = match.group(1).strip(), match.group(2).upper()
-    cities = get_json(f'https://servicodados.ibge.gov.br/api/v1/localidades/estados/{uf}/municipios')
-    city = next((item for item in cities if normalize(item['nome']) == normalize(city_name)), None)
-    if not city:
-        raise RequestError(f'Município não encontrado em {uf}. Confira o nome da cidade.', 400)
-    state = city.get('microrregiao', {}).get('mesorregiao', {}).get('UF', {}).get('nome', uf)
-    query = urllib.parse.urlencode({'q': f"{city['nome']}, {state}", 'countrycode': 'BR', 'limit': 10})
+    state = STATES[uf]
+    query = urllib.parse.urlencode({'q': f'{city_name}, {state}', 'countrycode': 'BR', 'limit': 10})
     data = get_json('https://photon.komoot.io/api/?' + query)
     match = next((feature['properties'] for feature in data.get('features', [])
-                  if normalize(feature['properties'].get('name')) == normalize(city['nome'])
+                  if normalize(feature['properties'].get('name')) == normalize(city_name)
                   and normalize(feature['properties'].get('state')) == normalize(state)
                   and feature['properties'].get('countrycode') == 'BR'
+                  and feature['properties'].get('type') == 'city'
                   and len(feature['properties'].get('extent', [])) == 4), None)
     if not match:
         raise RequestError('Não foi possível localizar os limites dessa cidade no mapa aberto.', 404)
     west, north, east, south = match['extent']
-    return city['nome'], uf, [west, south, east, north]
+    return match['name'], uf, [west, south, east, north]
 
 
 def search(input_data):
