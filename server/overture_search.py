@@ -1,9 +1,12 @@
 """Search an Overture city extract without keeping a local copy of the dataset."""
 import contextlib
+import gzip
+import io
 import json
 import re
 import sys
 import unicodedata
+from urllib.request import urlopen
 
 
 def normalize(value):
@@ -41,18 +44,38 @@ def match_score(keyword, name, category, hierarchy):
     return 75 if words and all(re.search(r'\b' + re.escape(word), text) for word in words) else 0
 
 
+def overture_batches(bbox):
+    import pyarrow.compute as pc
+    import pyarrow.dataset as ds
+    import pyarrow.fs as fs
+    import pyarrow.parquet as pq
+
+    with urlopen('https://stac.overturemaps.org/catalog.json', timeout=20) as response:
+        catalog = response.read()
+    if catalog.startswith(b'\x1f\x8b'):
+        catalog = gzip.decompress(catalog)
+    release = json.loads(catalog)['latest']
+    with urlopen(f'https://stac.overturemaps.org/{release}/collections.parquet', timeout=30) as response:
+        index = pq.read_table(io.BytesIO(response.read()))
+    west, south, east, north = bbox
+    bounds = ((pc.field('bbox', 'xmin') < east) & (pc.field('bbox', 'xmax') > west)
+              & (pc.field('bbox', 'ymin') < north) & (pc.field('bbox', 'ymax') > south))
+    index = index.filter((pc.field('collection') == 'place') & (pc.field('type') == 'Feature') & bounds)
+    paths = [item['aws']['alternate']['s3']['href'].removeprefix('s3://') for item in index.column('assets').to_pylist()]
+    if not paths:
+        return []
+    dataset = ds.dataset(paths, filesystem=fs.S3FileSystem(anonymous=True, region='us-west-2', connect_timeout=15, request_timeout=30))
+    columns = [c for c in ('id', 'names', 'addresses', 'phones', 'websites', 'socials', 'taxonomy', 'categories', 'bbox', 'confidence', 'operating_status') if c in dataset.schema.names]
+    return dataset.to_batches(columns=columns, filter=bounds, use_threads=True)
+
+
 def search_overture(request):
     # The library occasionally writes diagnostic messages to stdout.
     with contextlib.redirect_stdout(sys.stderr):
-        from overturemaps.core import record_batch_reader
-        reader = record_batch_reader('place', tuple(request['bbox']), stac=True, connect_timeout=15, request_timeout=30)
-        if reader is None:
-            raise RuntimeError('Não há dados de estabelecimentos para essa região.')
-        available = set(reader.schema.names)
-        columns = [c for c in ('id', 'names', 'addresses', 'phones', 'websites', 'socials', 'taxonomy', 'categories', 'bbox', 'confidence', 'operating_status') if c in available]
+        batches = overture_batches(request['bbox'])
         matches = []
-        for batch in reader:
-            for row in batch.select(columns).to_pylist():
+        for batch in batches:
+            for row in batch.to_pylist():
                 addresses = row.get('addresses') or []
                 if row.get('operating_status') in ('closed', 'permanently_closed'):
                     continue
