@@ -1,46 +1,30 @@
 # Vibe Afiações
 
-Sistema web para organizar o trabalho de uma oficina de afiação. Reúne clientes, materiais, serviços, recibos e controle financeiro em uma interface para computador e celular.
+O Vibe Afiações ajuda oficinas de afiação a organizar clientes, serviços, materiais e finanças em um só lugar. A interface funciona em computadores e celulares.
 
-## Funcionalidades
+## O que o sistema oferece
 
-- **Dashboard:** mostra faturamento por dia, semana, mês e ano, quantidade de clientes e serviços, formas de pagamento e ferramentas mais afiadas. As despesas entram no cálculo do saldo.
-- **Clientes:** guarda telefone, endereço e observações. É possível definir um prazo de retorno em meses; quando ele vence, aparece um alerta que pode ser marcado como visto.
-- **Materiais:** mantém os itens atendidos pela oficina e seus preços padrão. Esses valores preenchem os itens de uma nova afiação.
-- **Afiações:** registra cliente, data, itens, quantidades, desconto, pagamento e observações. O histórico permite editar o serviço, imprimir o recibo ou gerar um PDF.
-- **Relatórios:** filtra as afiações por período, cliente, ferramenta e forma de pagamento. Mostra quantidade de serviços, faturamento e valor médio do recorte escolhido.
-- **Encontrar clientes:** pesquisa estabelecimentos por atividade e cidade brasileira no formato `Cidade, UF`. O limite escolhido define quantos resultados aparecem por vez. **Mostrar novos resultados** exibe outra leva dos estabelecimentos encontrados, sem repetir os anteriores durante a mesma busca. O botão de WhatsApp abre uma conversa com a mensagem configurada na tela; `{empresa}` insere o nome do estabelecimento. Quando disponíveis, também aparecem links para o mapa, site e rede social.
-- **Configurações:** registra despesas, alterna o tema claro ou escuro e permite sair da conta.
+- **Dashboard:** acompanha faturamento por período, clientes, afiações, formas de pagamento e ferramentas mais atendidas. As despesas registradas entram no cálculo do saldo.
+- **Clientes:** mantém contatos, endereços e observações, além de avisar quando chega o prazo de retorno definido para cada pessoa.
+- **Materiais:** organiza os itens atendidos e seus preços padrão, que podem ser usados ao cadastrar uma afiação.
+- **Afiações:** registra cliente, data, itens, quantidades, desconto, pagamento e observações. Os serviços podem ser consultados e editados depois, com opção de imprimir ou gerar recibo em PDF.
+- **Relatórios:** reúne os serviços por período, cliente, ferramenta e forma de pagamento, com totais e valor médio.
+- **Despesas:** registra gastos da oficina para acompanhar o resultado financeiro junto ao faturamento.
+- **Encontrar clientes:** procura estabelecimentos por atividade e cidade e ajuda a iniciar o contato pelo WhatsApp.
+- **Tema e conta:** permite alternar entre os temas claro e escuro e acessar ou encerrar a conta.
 
-A busca de estabelecimentos usa dados abertos da Overture Maps e localiza a cidade pelo Photon. O link **Pesquisar no Google Maps** abre uma pesquisa em outra aba; a busca automática não usa a API do Google. Telefones e outros dados podem estar ausentes ou desatualizados, e o sistema não confirma se um número possui WhatsApp. A mensagem de contato e os filtros de relatório ficam salvos no navegador.
+## Como funciona o buscador
 
-## Como rodar
+O buscador recebe uma atividade, como “manicure” ou “pet shop”, e uma cidade brasileira no formato `Cidade, UF`. A quantidade escolhida define quantos resultados são mostrados por vez.
 
-É preciso ter Node.js, Python e acesso à internet. Na raiz do projeto:
+Ao iniciar a busca, o sistema confirma a sessão da conta e localiza os limites da cidade usando o Photon, um serviço de geocodificação baseado em dados abertos do OpenStreetMap. Em seguida, consulta os dados públicos de estabelecimentos da Overture Maps e procura os registros dentro dessa área. Os resultados são filtrados pela atividade e pelo nome ou categoria, estabelecimentos marcados como fechados são descartados, e possíveis duplicatas são removidas. Os mais relevantes aparecem primeiro.
 
-```bash
-npm install
-python -m venv .venv-leads
-```
+Se houver mais resultados do que a quantidade exibida, **Mostrar novos resultados** apresenta a próxima leva sem repetir os que já apareceram naquela busca. Cada resultado pode incluir endereço, telefone, site, rede social e localização no mapa, conforme a disponibilidade dos dados. O botão do WhatsApp abre a conversa com o número encontrado e a mensagem configurada; `{empresa}` é substituído pelo nome do estabelecimento. Também é possível abrir uma pesquisa manual no Google Maps.
 
-Instale a dependência da busca:
+A busca automática não usa a API do Google Maps. A cobertura varia por cidade e atividade: dados públicos podem estar incompletos ou desatualizados, e a presença de um telefone não confirma que ele tenha WhatsApp. A busca funciona no servidor do sistema, que valida o acesso antes de consultar os serviços de mapas.
 
-```powershell
-# Windows
-.\.venv-leads\Scripts\python.exe -m pip install -r requirements.txt
-```
+## Dados e privacidade
 
-```bash
-# Linux ou macOS
-.venv-leads/bin/python -m pip install -r requirements.txt
-```
-
-Execute `npm run dev`. Sem variáveis de ambiente, o desenvolvimento usa dados de demonstração guardados no navegador. Para usar um projeto Supabase, copie `.env.example` para `.env` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Não coloque a chave `service_role` no frontend.
-
-Para iniciar um banco novo, aplique as migrações de `supabase/migrations` na ordem numérica. Em produção, login, clientes, afiações, materiais e despesas usam o Supabase. Cada conta acessa seus próprios registros.
-
-## Publicação
-
-O frontend e a rota `/api/places` rodam na Vercel. Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no projeto antes do build. A rota de busca valida a sessão no Supabase e usa a dependência Python de `requirements.txt`. O servidor precisa conseguir acessar Photon e Overture Maps.
+No uso com conta, clientes, afiações, materiais e despesas ficam associados ao usuário no Supabase, com isolamento entre contas. A mensagem do WhatsApp e os filtros dos relatórios são guardados no navegador. Os dados do buscador vêm da Overture Maps e a cidade é localizada pelo Photon.
 
 Dados de estabelecimentos: [Overture Maps](https://docs.overturemaps.org/attribution/).
