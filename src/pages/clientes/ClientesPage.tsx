@@ -36,6 +36,21 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+function WhatsAppIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 32 32" fill="none" className="h-4 w-4">
+      <path d="M16.04 2.5a13.45 13.45 0 0 0-11.6 20.27L2.65 29.5l6.9-1.8A13.45 13.45 0 1 0 16.04 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12.03 9.53c-.3-.66-.62-.68-.91-.69h-.78c-.27 0-.7.1-1.07.5-.37.4-1.4 1.37-1.4 3.34s1.44 3.88 1.64 4.15c.2.26 2.8 4.48 6.9 6.1 3.4 1.34 4.1 1.07 4.83 1 .74-.06 2.38-.97 2.71-1.91.34-.94.34-1.74.24-1.91-.1-.17-.37-.27-.77-.47-.4-.2-2.38-1.17-2.75-1.3-.37-.14-.64-.2-.9.2-.27.4-1.04 1.3-1.28 1.57-.23.27-.47.3-.87.1-.4-.2-1.69-.62-3.22-1.98-1.19-1.06-1.99-2.37-2.22-2.77-.24-.4-.03-.62.18-.82.18-.18.4-.47.6-.7.2-.23.27-.4.4-.67.13-.27.06-.5-.04-.7-.1-.2-.88-2.18-1.23-2.97Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function whatsappUrl(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (!/^\d{10,11}$/.test(digits)) return undefined;
+  return `https://wa.me/55${digits}`;
+}
+
 export function ClientesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -135,8 +150,14 @@ export function ClientesPage() {
           <TableBody>
             {sorted.map((cliente) => (
               <TableRow key={cliente.id}>
+                {/** phone action is placed alongside the saved phone number */}
                 <TableCell className="font-medium"><div><p>{cliente.nome}</p>{cliente.alerta_atrasado ? <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive"><AlertTriangle className="h-3 w-3" />Alerta vencido</span> : null}</div></TableCell>
-                <TableCell>{cliente.telefone}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{cliente.telefone}</span>
+                    {whatsappUrl(cliente.telefone) ? <a href={whatsappUrl(cliente.telefone)} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp de ${cliente.nome}`} title="Abrir conversa no WhatsApp" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20BD5A]"><WhatsAppIcon /></a> : null}
+                  </div>
+                </TableCell>
                 <TableCell className="max-w-[260px] truncate">{cliente.endereco}</TableCell>
                 <TableCell>{formatDateTime(cliente.created_at)}</TableCell>
                 <TableCell>{cliente.ultima_afiacao ? formatDateOnly(cliente.ultima_afiacao) : <span className="text-muted-foreground">Nenhum serviço</span>}</TableCell>
@@ -160,6 +181,7 @@ export function ClientesPage() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">{cliente.nome}</p>{cliente.alerta_atrasado ? <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive"><AlertTriangle className="h-3 w-3" />Alerta vencido</span> : null}
                     <p className="text-xs text-muted-foreground">{cliente.telefone}</p>
+                    {whatsappUrl(cliente.telefone) ? <a href={whatsappUrl(cliente.telefone)} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp de ${cliente.nome}`} title="Abrir conversa no WhatsApp" className="mt-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20BD5A]"><WhatsAppIcon /></a> : null}
                   </div>
                   <div className="flex gap-2">
                     {cliente.alerta_atrasado ? <Button variant="secondary" size="sm" onClick={() => acknowledgeMutation.mutate(cliente.id)}><Check className="mr-2 h-4 w-4" />Estou ciente</Button> : null}

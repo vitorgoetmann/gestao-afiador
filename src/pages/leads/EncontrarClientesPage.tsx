@@ -47,6 +47,9 @@ export function EncontrarClientesPage() {
   const [limit, setLimit] = useState(20);
   const [message, setMessage] = useLocalStorage(`vibe-leads-message-${user?.id ?? 'local'}`, defaultMessage);
   const [results, setResults] = useState<Lead[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [batchQueue, setBatchQueue] = useState<Lead[]>([]);
+  const [batchNextIndex, setBatchNextIndex] = useState(0);
   const [total, setTotal] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [viewed, setViewed] = useState(0);
@@ -63,6 +66,9 @@ export function EncontrarClientesPage() {
     setLoading(true);
     setError('');
     setResults([]);
+    setSelectedIds(new Set());
+    setBatchQueue([]);
+    setBatchNextIndex(0);
     setSearched(false);
     remainingLeads.current = [];
     setRemaining(0);
@@ -95,9 +101,42 @@ export function EncontrarClientesPage() {
     const batch = takeLeadBatch(remainingLeads.current, searchLimit.current);
     remainingLeads.current = batch.remaining;
     setResults(batch.places);
+    setSelectedIds(new Set());
+    setBatchQueue([]);
+    setBatchNextIndex(0);
     setViewed((count) => count + batch.places.length);
     setRemaining(batch.remaining.length);
   }
+
+  function whatsappUrlFor(lead: Lead) {
+    const phone = whatsappNumber(lead.phone);
+    if (!phone) return undefined;
+    const personalizedMessage = message.replaceAll('{empresa}', lead.name);
+    return `https://wa.me/${phone}?text=${encodeURIComponent(personalizedMessage)}`;
+  }
+
+  function openBatchConversation(lead: Lead) {
+    const url = whatsappUrlFor(lead);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function startBatch() {
+    const queue = results.filter((lead) => selectedIds.has(lead.id) && whatsappUrlFor(lead));
+    if (!queue.length) return;
+    setBatchQueue(queue);
+    openBatchConversation(queue[0]);
+    setBatchNextIndex(1);
+  }
+
+  function openNextBatchConversation() {
+    const lead = batchQueue[batchNextIndex];
+    if (!lead) return;
+    openBatchConversation(lead);
+    setBatchNextIndex((index) => index + 1);
+  }
+
+  const selectableResults = results.filter((lead) => whatsappUrlFor(lead));
+  const allSelectableSelected = selectableResults.length > 0 && selectableResults.every((lead) => selectedIds.has(lead.id));
 
   return (
     <div className="space-y-6">
@@ -163,17 +202,37 @@ export function EncontrarClientesPage() {
             </Button>
             <p className="text-sm text-muted-foreground">{remaining ? `${viewed} já exibidos · ${remaining} restantes nesta busca` : 'Todos os resultados desta busca já foram exibidos.'}</p>
           </div> : null}
+          {selectableResults.length > 0 ? <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedIds(allSelectableSelected ? new Set() : new Set(selectableResults.map((lead) => lead.id)))}>
+              {allSelectableSelected ? 'Desmarcar todos' : 'Selecionar todos com telefone'}
+            </Button>
+            <span className="text-sm text-muted-foreground">{selectedIds.size} selecionado(s)</span>
+            <Button type="button" size="sm" onClick={startBatch} disabled={!selectedIds.size}>
+              <MessageCircle className="mr-2 h-4 w-4" />Abrir mensagens selecionadas
+            </Button>
+            {batchQueue.length > 0 ? <>
+              {batchNextIndex < batchQueue.length ? <Button type="button" variant="secondary" size="sm" onClick={openNextBatchConversation}>Abrir próxima conversa ({batchNextIndex + 1}/{batchQueue.length})</Button> : <span className="text-sm text-muted-foreground">Todos os rascunhos foram abertos.</span>}
+              <p className="basis-full text-xs text-muted-foreground">{batchNextIndex} de {batchQueue.length} conversas abertas. Revise e envie cada mensagem no WhatsApp; o envio automático não é permitido por este link.</p>
+            </> : null}
+          </div> : null}
           {!results.length ? <p className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Nenhum resultado para esta busca. Tente outra palavra-chave ou região.</p> : null}
           <div className="grid gap-4 lg:grid-cols-2">
             {results.map((lead) => {
               const phone = whatsappNumber(lead.phone);
-              const whatsappMessage = message.replaceAll('{empresa}', lead.name);
-              const whatsappUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}` : undefined;
+              const whatsappUrl = whatsappUrlFor(lead);
               return (
                 <Card key={lead.id} className="border-border">
                   <CardContent className="space-y-3 pt-6">
-                    <div>
+                    <div className="flex items-start gap-3">
+                      {phone ? <input type="checkbox" aria-label={`Selecionar ${lead.name} para mensagem em lote`} checked={selectedIds.has(lead.id)} onChange={(event) => setSelectedIds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.add(lead.id);
+                        else next.delete(lead.id);
+                        return next;
+                      })} className="mt-1 h-4 w-4 accent-primary" /> : null}
+                      <div>
                       <h3 className="text-lg font-semibold">{lead.name}</h3>
+                      </div>
                     </div>
                     {lead.address ? <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{lead.address}</p> : null}
                     <p className="text-sm">{lead.phone || 'Telefone não informado na fonte'}</p>
