@@ -1,0 +1,16 @@
+node_modules
+dist
+.tsbuild
+.tsbuild/
+.tsbuildinfo
+*.tsbuildinfo
+supabase/.temp/
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage
+.venv-leads/
+__pycache__/
+*.pyc
+*.log

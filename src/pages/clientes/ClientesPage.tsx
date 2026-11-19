@@ -1,0 +1,289 @@
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, ArrowUpDown, Check, Edit2, Plus, Trash2 } from 'lucide-react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PageHeader } from '@/components/common/PageHeader';
+import { SearchInput } from '@/components/common/SearchInput';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Label } from '@/components/ui/Label';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Select } from '@/components/ui/Select';
+import { DataTable } from '@/components/common/DataTable';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableEmpty } from '@/components/ui/Table';
+import { PhoneInput } from '@/components/common/PhoneInput';
+import { acknowledgeClienteAlert, createCliente, deleteCliente, fetchClientes, updateCliente } from '@/services/clientesService';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { toast } from 'sonner';
+import type { Cliente } from '@/types/domain';
+import { formatDateOnly, formatDateTime } from '@/utils/format';
+import { cn } from '@/lib/utils';
+
+const schema = z.object({
+  nome: z.string().min(3, 'Informe o nome do cliente'),
+  telefone: z.string().min(10, 'Informe o telefone'),
+  endereco: z.string().min(3, 'Informe o endereço'),
+  observacoes: z.string(),
+  alerta_ativo: z.boolean(),
+  alerta_periodo_meses: z.number().int().min(1, 'Informe um período maior que zero'),
+  alerta_ciente_em: z.string().nullable(),
+});
+
+type FormValues = z.infer<typeof schema>;
+type ClientSort = 'name' | 'last_service' | 'oldest_service' | 'newest' | 'alerts';
+
+function WhatsAppIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 32 32" fill="none" className="h-4 w-4">
+      <path d="M16.04 2.5a13.45 13.45 0 0 0-11.6 20.27L2.65 29.5l6.9-1.8A13.45 13.45 0 1 0 16.04 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12.03 9.53c-.3-.66-.62-.68-.91-.69h-.78c-.27 0-.7.1-1.07.5-.37.4-1.4 1.37-1.4 3.34s1.44 3.88 1.64 4.15c.2.26 2.8 4.48 6.9 6.1 3.4 1.34 4.1 1.07 4.83 1 .74-.06 2.38-.97 2.71-1.91.34-.94.34-1.74.24-1.91-.1-.17-.37-.27-.77-.47-.4-.2-2.38-1.17-2.75-1.3-.37-.14-.64-.2-.9.2-.27.4-1.04 1.3-1.28 1.57-.23.27-.47.3-.87.1-.4-.2-1.69-.62-3.22-1.98-1.19-1.06-1.99-2.37-2.22-2.77-.24-.4-.03-.62.18-.82.18-.18.4-.47.6-.7.2-.23.27-.4.4-.67.13-.27.06-.5-.04-.7-.1-.2-.88-2.18-1.23-2.97Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function whatsappUrl(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  if (!/^\d{10,11}$/.test(digits)) return undefined;
+  return `https://wa.me/55${digits}`;
+}
+
+export function ClientesPage() {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search);
+  const [editing, setEditing] = useState<Cliente | null>(null);
+  const [deleting, setDeleting] = useState<Cliente | null>(null);
+  const [open, setOpen] = useState(false);
+  const [sortBy, setSortBy] = useLocalStorage<ClientSort>('vibe-clientes-ordenacao', 'name');
+
+  const { data, isLoading } = useQuery({ queryKey: ['clientes', debouncedSearch], queryFn: () => fetchClientes(debouncedSearch) });
+
+  const mutation = useMutation({
+    mutationFn: async (values: FormValues & { id?: string }) => {
+      if (values.id) return updateCliente(values.id, values);
+      return createCliente(values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success(editing ? 'Cliente atualizado' : 'Cliente cadastrado');
+      setOpen(false);
+      setEditing(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCliente,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success('Cliente excluído');
+      setDeleting(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: acknowledgeClienteAlert,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      toast.success('Alerta reconhecido');
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const sorted = useMemo(() => {
+    const clientes = [...(data ?? [])];
+    const byName = (left: Cliente, right: Cliente) => left.nome.localeCompare(right.nome, 'pt-BR', { sensitivity: 'base' });
+
+    return clientes.sort((left, right) => {
+      if (sortBy === 'newest') return right.created_at.localeCompare(left.created_at) || byName(left, right);
+      if (sortBy === 'alerts') return Number(Boolean(right.alerta_atrasado)) - Number(Boolean(left.alerta_atrasado)) || byName(left, right);
+      if (sortBy === 'last_service') {
+        if (!left.ultima_afiacao && !right.ultima_afiacao) return byName(left, right);
+        if (!left.ultima_afiacao) return 1;
+        if (!right.ultima_afiacao) return -1;
+        return right.ultima_afiacao.localeCompare(left.ultima_afiacao) || byName(left, right);
+      }
+      if (sortBy === 'oldest_service') {
+        if (!left.ultima_afiacao && !right.ultima_afiacao) return byName(left, right);
+        if (!left.ultima_afiacao) return -1;
+        if (!right.ultima_afiacao) return 1;
+        return left.ultima_afiacao.localeCompare(right.ultima_afiacao) || byName(left, right);
+      }
+      return byName(left, right);
+    });
+  }, [data, sortBy]);
+
+  const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { nome: '', telefone: '', endereco: '', observacoes: '', alerta_ativo: false, alerta_periodo_meses: 3, alerta_ciente_em: null },
+  });
+  const alertaAtivo = watch('alerta_ativo');
+
+  function startCreate() {
+    setEditing(null);
+    reset({ nome: '', telefone: '', endereco: '', observacoes: '', alerta_ativo: false, alerta_periodo_meses: 3, alerta_ciente_em: null });
+    setOpen(true);
+  }
+
+  function startEdit(cliente: Cliente) {
+    setEditing(cliente);
+    setOpen(true);
+    reset({
+      nome: cliente.nome,
+      telefone: cliente.telefone,
+      endereco: cliente.endereco,
+      observacoes: cliente.observacoes,
+      alerta_ativo: cliente.alerta_ativo,
+      alerta_periodo_meses: cliente.alerta_periodo_meses || 3,
+      alerta_ciente_em: cliente.alerta_ciente_em ?? null,
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Clientes"
+        description="Cadastro e manutenção da base de clientes com pesquisa instantânea e exclusão confirmada."
+        actions={
+          <>
+            <div className="w-full sm:w-80"><SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar cliente" /></div>
+            <Button onClick={startCreate}><Plus className="mr-2 h-4 w-4" />Novo cliente</Button>
+          </>
+        }
+      />
+
+      <DataTable
+        title="Lista de clientes"
+        description={`${sorted.length} ${sorted.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}`}
+        loading={isLoading}
+        empty={!sorted.length}
+        actions={(
+          <div className="relative">
+            <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Select
+              aria-label="Ordenar clientes"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as ClientSort)}
+              className="pl-9 sm:min-w-56"
+            >
+              <option value="name">Nome: A–Z</option>
+              <option value="last_service">Último serviço recente</option>
+              <option value="oldest_service">Há mais tempo sem serviço</option>
+              <option value="newest">Cadastros mais novos</option>
+              <option value="alerts">Alertas primeiro</option>
+            </Select>
+          </div>
+        )}
+      >
+        <Table className="hidden md:table">
+          <TableHead>
+            <TableRow>
+              <TableHeader>Nome</TableHeader>
+              <TableHeader>Telefone</TableHeader>
+              <TableHeader>Endereço</TableHeader>
+              <TableHeader>Criado em</TableHeader>
+              <TableHeader>Último serviço</TableHeader>
+              <TableHeader className="text-right">Ações</TableHeader>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sorted.map((cliente) => (
+              <TableRow key={cliente.id}>
+                {/** phone action is placed alongside the saved phone number */}
+                <TableCell className="font-medium"><div><p>{cliente.nome}</p>{cliente.alerta_atrasado ? <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive"><AlertTriangle className="h-3 w-3" />Alerta vencido</span> : null}</div></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{cliente.telefone}</span>
+                    {whatsappUrl(cliente.telefone) ? <a href={whatsappUrl(cliente.telefone)} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp de ${cliente.nome}`} title="Abrir conversa no WhatsApp" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20BD5A]"><WhatsAppIcon /></a> : null}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[260px] truncate">{cliente.endereco}</TableCell>
+                <TableCell>{formatDateTime(cliente.created_at)}</TableCell>
+                <TableCell>{cliente.ultima_afiacao ? formatDateOnly(cliente.ultima_afiacao) : <span className="text-muted-foreground">Nenhum serviço</span>}</TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    {cliente.alerta_atrasado ? <Button variant="secondary" size="sm" onClick={() => acknowledgeMutation.mutate(cliente.id)}><Check className="mr-2 h-4 w-4" />Estou ciente</Button> : null}
+                    <Button variant="secondary" size="sm" onClick={() => startEdit(cliente)}><Edit2 className="mr-2 h-4 w-4" />Editar</Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleting(cliente)}><Trash2 className="mr-2 h-4 w-4" />Excluir</Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!sorted.length ? <TableEmpty colSpan={6}>Nenhum cliente encontrado.</TableEmpty> : null}
+          </TableBody>
+        </Table>
+        <div className="grid gap-3 md:hidden p-4 sm:p-6">
+          {sorted.map((cliente) => (
+            <Card key={cliente.id} className="border-border/80 bg-background/80">
+              <div className="space-y-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{cliente.nome}</p>{cliente.alerta_atrasado ? <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 text-xs font-medium text-destructive"><AlertTriangle className="h-3 w-3" />Alerta vencido</span> : null}
+                    <p className="text-xs text-muted-foreground">{cliente.telefone}</p>
+                    {whatsappUrl(cliente.telefone) ? <a href={whatsappUrl(cliente.telefone)} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp de ${cliente.nome}`} title="Abrir conversa no WhatsApp" className="mt-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#20BD5A]"><WhatsAppIcon /></a> : null}
+                  </div>
+                  <div className="flex gap-2">
+                    {cliente.alerta_atrasado ? <Button variant="secondary" size="sm" onClick={() => acknowledgeMutation.mutate(cliente.id)}><Check className="mr-2 h-4 w-4" />Estou ciente</Button> : null}
+                    <Button variant="secondary" size="sm" onClick={() => startEdit(cliente)}>Editar</Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleting(cliente)}>Excluir</Button>
+                  </div>
+                </div>
+                <div className="grid gap-2 text-sm">
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Endereço</p>
+                    <p className="mt-1 break-words">{cliente.endereco}</p>
+                  </div>
+                  <div className="rounded-2xl bg-secondary/40 px-3 py-2">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Observações</p>
+                    <p className={cn('mt-1 break-words', !cliente.observacoes && 'text-muted-foreground')}>{cliente.observacoes || 'Sem observações'}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Criado em {formatDateTime(cliente.created_at)}</p>
+                  <p className="text-xs text-muted-foreground">Último serviço: {cliente.ultima_afiacao ? formatDateOnly(cliente.ultima_afiacao) : 'Nenhum serviço'}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </DataTable>
+
+      <Modal open={open} title={editing ? 'Editar cliente' : 'Novo cliente'} onClose={() => setOpen(false)}>
+        <form className="space-y-4" onSubmit={handleSubmit((values: FormValues) => mutation.mutate({ ...values, id: editing?.id }))}>
+          <div className="space-y-2"><Label htmlFor="nome">Nome</Label><Input id="nome" {...register('nome')} />{errors.nome ? <p className="text-xs text-destructive">{errors.nome.message}</p> : null}</div>
+          <div className="space-y-2">
+            <Label htmlFor="telefone">Telefone</Label>
+            <Controller
+              control={control}
+              name="telefone"
+              render={({ field }) => <PhoneInput id="telefone" value={field.value} onValueChange={field.onChange} />}
+            />
+            {errors.telefone ? <p className="text-xs text-destructive">{errors.telefone.message}</p> : null}
+          </div>
+          <div className="space-y-2"><Label htmlFor="endereco">Endereço</Label><Input id="endereco" {...register('endereco')} />{errors.endereco ? <p className="text-xs text-destructive">{errors.endereco.message}</p> : null}</div>
+          <div className="space-y-2"><Label htmlFor="observacoes">Observações</Label><Textarea id="observacoes" {...register('observacoes')} /></div>
+          <div className="grid gap-4 rounded-md border border-border bg-secondary/30 p-4 sm:grid-cols-2">
+            <div className="space-y-2"><Label htmlFor="alerta_ativo">Cadastrar alerta</Label><Select id="alerta_ativo" {...register('alerta_ativo', { setValueAs: (value) => value === 'true' })}><option value="false">Não</option><option value="true">Sim</option></Select></div>
+            {alertaAtivo ? <div className="space-y-2"><Label htmlFor="alerta_periodo_meses">Período do alerta (meses)</Label><Input id="alerta_periodo_meses" type="number" min="1" step="1" {...register('alerta_periodo_meses', { valueAsNumber: true })} />{errors.alerta_periodo_meses ? <p className="text-xs text-destructive">{errors.alerta_periodo_meses.message}</p> : null}</div> : null}
+          </div>
+          <div className="flex justify-end gap-3"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancelar</Button><Button type="submit">Salvar</Button></div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        title="Excluir cliente"
+        description={`Confirma a exclusão de ${deleting?.nome}? Esta ação não pode ser desfeita.`}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        confirmLabel="Excluir"
+        danger
+      />
+    </div>
+  );
+}
